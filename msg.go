@@ -21,7 +21,7 @@ type msg struct {
 func (m *msg) parse() os.Error {
 	switch m.Type {
 	default:
-		return fmt.Errorf("pq: unknown server response %c", m.Type)
+		return fmt.Errorf("pq: unknown server response (%c)", m.Type)
 	}
 
 	panic("not reached")
