@@ -7,10 +7,9 @@ type buffer struct {
 
 func newBuffer() *buffer {
 	// return a buffer that starts after the header
-	return &buffer{
-		b: make([]byte, 1024),
-		pos:5,
-	}
+	b := &buffer{b: make([]byte, 1024)}
+	b.reset()
+	return b
 }
 
 func (b *buffer) setType(c byte) {
@@ -53,4 +52,10 @@ func (b *buffer) bytes() []byte {
 		return b.b[1:b.pos]
 	}
 	return b.b[:b.pos]
+}
+
+func (b *buffer) reset() {
+	b.pos = 5
+	b.setType(0)
+	b.setLength()
 }

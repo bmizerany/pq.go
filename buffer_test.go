@@ -22,3 +22,11 @@ func TestBufferType(t *testing.T) {
 	buf.setType(0)
 	assert.Equal(t, "\x00\x00\x00\x04", string(buf.bytes()))
 }
+
+func TestBufferReset(t *testing.T) {
+	buf := newBuffer()
+	buf.setType('X')
+	buf.writeString("testing")
+	buf.reset()
+	assert.Equal(t, "\x00\x00\x00\x04", string(buf.bytes()))
+}
