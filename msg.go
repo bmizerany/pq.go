@@ -15,8 +15,8 @@ type msg struct {
 }
 
 func (m *msg) decode() {
-	switch m.header.Mark {
+	switch m.Mark {
 	default:
-		panic(fmt.Sprintf("pq: unknown server response %c", m.header.Mark))
+		panic(fmt.Sprintf("pq: unknown server response %c", m.Mark))
 	}
 }

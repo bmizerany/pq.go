@@ -38,7 +38,7 @@ func (s *scanner) run(msgs chan<- *msg) {
 			return
 		}
 
-		m.body = make([]byte, m.header.Length-sizeOfInt32)
+		m.body = make([]byte, m.Length-sizeOfInt32)
 		_, err = io.ReadFull(s.r, m.body)
 		if err != nil {
 			return
