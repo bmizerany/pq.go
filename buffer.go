@@ -49,5 +49,8 @@ func (b *buffer) writeInt32(v int32) {
 }
 
 func (b *buffer) bytes() []byte {
+	if b.b[0] == 0 {
+		return b.b[1:b.pos]
+	}
 	return b.b[:b.pos]
 }
