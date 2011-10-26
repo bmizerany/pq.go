@@ -14,7 +14,7 @@ type scanner struct {
 	err  os.Error
 }
 
-func scan(r io.ReadWriter) *scanner {
+func scan(r io.Reader) *scanner {
 	msgs := make(chan *msg)
 	s := &scanner{r: r, msgs: msgs}
 
