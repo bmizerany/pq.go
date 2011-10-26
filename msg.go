@@ -5,7 +5,7 @@ import (
 )
 
 type header struct {
-	Mark   byte
+	Type   byte
 	Length int32
 }
 
@@ -15,8 +15,8 @@ type msg struct {
 }
 
 func (m *msg) decode() {
-	switch m.Mark {
+	switch m.Type {
 	default:
-		panic(fmt.Sprintf("pq: unknown server response %c", m.Mark))
+		panic(fmt.Sprintf("pq: unknown server response %c", m.Type))
 	}
 }
