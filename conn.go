@@ -1,9 +1,11 @@
 package pq
 
 import (
+	"encoding/binary"
+	"fmt"
+	"github.com/bmizerany/pq.go/buffer"
 	"io"
 	"os"
-	"fmt"
 )
 
 const ProtoVersion = int32(196608)
@@ -26,31 +28,30 @@ func (vs Values) Del(k string) {
 }
 
 type Conn struct {
-	*buffer
-	wc  io.ReadWriteCloser
+	b   *buffer.Buffer
 	scr *scanner
+	wc  io.ReadWriteCloser
 }
 
 func New(rwc io.ReadWriteCloser) *Conn {
 	cn := &Conn{
+		b:   buffer.New(nil),
 		wc:  rwc,
 		scr: scan(rwc),
-		buffer: newBuffer(),
 	}
 
 	return cn
 }
 
 func (cn *Conn) Startup(params Values) os.Error {
-	cn.setType(0)
-	cn.writeInt32(ProtoVersion)
+	cn.b.WriteInt32(ProtoVersion)
 	for k, v := range params {
-		cn.writeString(k)
-		cn.writeString(v)
+		cn.b.WriteCString(k)
+		cn.b.WriteCString(v)
 	}
-	cn.writeString("")
+	cn.b.WriteCString("")
 
-	err := cn.flush()
+	err := cn.flush(0)
 	if err != nil {
 		return err
 	}
@@ -90,9 +91,24 @@ func (cn *Conn) nextMsg() (*msg, os.Error) {
 	return m, nil
 }
 
-func (cn *Conn) flush() os.Error {
-	cn.setLength()
-	_, err := cn.wc.Write(cn.bytes())
-	cn.reset()
+func (cn *Conn) flush(t byte) os.Error {
+	if t > 0 {
+		err := binary.Write(cn.wc, binary.BigEndian, t)
+		if err != nil {
+			return err
+		}
+	}
+
+	l := int32(cn.b.Len()) + sizeOfInt32
+	err := binary.Write(cn.wc, binary.BigEndian, l)
+	if err != nil {
+		return err
+	}
+
+	_, err = cn.b.WriteTo(cn.wc)
+	if err != nil {
+		return err
+	}
+
 	return err
 }

@@ -1,7 +1,9 @@
 package pq
 
 import (
+	"bytes"
 	"encoding/binary"
+	"github.com/bmizerany/pq.go/buffer"
 	"io"
 	"os"
 )
@@ -37,12 +39,15 @@ func (s *scanner) run(msgs chan<- *msg) {
 		if err != nil {
 			return
 		}
+		m.Length -= sizeOfInt32
 
-		m.body = make([]byte, m.Length-sizeOfInt32)
-		_, err = io.ReadFull(s.r, m.body)
+		b := make([]byte, m.Length)
+		_, err = io.ReadFull(s.r, b)
 		if err != nil {
 			return
 		}
+
+		m.Buffer = &buffer.Buffer{bytes.NewBuffer(b)}
 
 		msgs <- m
 	}

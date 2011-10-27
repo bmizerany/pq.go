@@ -4,7 +4,6 @@ include $(GOROOT)/src/Make.inc
 
 TARG=github.com/bmizerany/pq.go
 GOFILES=\
-	buffer.go\
 	conn.go\
 	msg.go\
 	scan.go\
