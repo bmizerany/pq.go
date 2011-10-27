@@ -70,3 +70,11 @@ func (b *Buffer) ReadInt32() (i int32) {
 
 	return
 }
+
+func (b *Buffer) ReadByte() byte {
+	c, err := b.Buffer.ReadByte()
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
