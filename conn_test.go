@@ -10,6 +10,7 @@ import (
 func TestConnStartupErr(t *testing.T) {
 	nc, err := net.Dial("tcp", "localhost:5432")
 	assert.Equalf(t, nil, err, "%v", err)
+	defer nc.Close()
 
 	cn := New(nc)
 	assert.Equalf(t, nil, err, "%v", err)
@@ -21,10 +22,26 @@ func TestConnStartupErr(t *testing.T) {
 func TestConnStartup(t *testing.T) {
 	nc, err := net.Dial("tcp", "localhost:5432")
 	assert.Equalf(t, nil, err, "%v", err)
+	defer nc.Close()
 
 	cn := New(nc)
 	assert.Equalf(t, nil, err, "%v", err)
 
 	err = cn.Startup(Values{"user": os.Getenv("USER")})
+	assert.Equalf(t, nil, err, "%v", err)
+}
+
+func TestConnQuery(t *testing.T) {
+	nc, err := net.Dial("tcp", "localhost:5432")
+	assert.Equalf(t, nil, err, "%v", err)
+	defer nc.Close()
+
+	cn := New(&lrwc{nc})
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Startup(Values{"user": os.Getenv("USER")})
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Parse("test", "SELECT 1 AS foo")
 	assert.Equalf(t, nil, err, "%v", err)
 }

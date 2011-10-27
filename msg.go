@@ -16,7 +16,12 @@ type msg struct {
 	*buffer.Buffer
 	err os.Error
 
-	status int
+	auth int
+
+	status byte
+
+	key, val string
+	pid, secret int
 }
 
 func (m *msg) parse() os.Error {
@@ -24,7 +29,17 @@ func (m *msg) parse() os.Error {
 	default:
 		return fmt.Errorf("pq: unknown server response (%c)", m.Type)
 	case 'R':
-		m.status = int(m.ReadInt32())
+		m.auth = int(m.ReadInt32())
+	case 'S':
+		m.key = m.ReadCString()
+		m.val = m.ReadCString()
+	case 'K':
+		m.pid = int(m.ReadInt32())
+		m.secret = int(m.ReadInt32())
+	case 'Z':
+		m.status = m.ReadByte()
+	case '1':
+		// Nothing to read
 	}
 
 	return nil

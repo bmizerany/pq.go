@@ -28,6 +28,10 @@ func (vs Values) Del(k string) {
 }
 
 type Conn struct {
+	Settings Values
+	Pid int
+	Secret int
+
 	b   *buffer.Buffer
 	scr *scanner
 	wc  io.ReadWriteCloser
@@ -35,6 +39,7 @@ type Conn struct {
 
 func New(rwc io.ReadWriteCloser) *Conn {
 	cn := &Conn{
+		Settings: make(Values),
 		b:   buffer.New(nil),
 		wc:  rwc,
 		scr: scan(rwc),
@@ -56,6 +61,57 @@ func (cn *Conn) Startup(params Values) os.Error {
 		return err
 	}
 
+	for {
+		m, err := cn.nextMsg()
+		if err != nil {
+			return err
+		}
+
+		err = m.parse()
+		if err != nil {
+			return err
+		}
+
+		switch m.Type {
+		default:
+			return fmt.Errorf("pq: unknown startup response (%c)", m.Type)
+		case 'E':
+			return m.err
+		case 'R':
+			switch m.auth {
+			default:
+				return fmt.Errorf("pq: unknown authentication type (%d)", m.status)
+			case 0:
+				continue
+			}
+		case 'S':
+			cn.Settings.Set(m.key, m.val)
+		case 'K':
+			cn.Pid = m.pid
+			cn.Pid = m.secret
+		case 'Z':
+			return nil
+		}
+	}
+
+	panic("not reached")
+}
+
+func (cn *Conn) Parse(name, query string) os.Error {
+	cn.b.WriteCString(name)
+	cn.b.WriteCString(query)
+	cn.b.WriteInt16(0)
+
+	err := cn.flush('P')
+	if err != nil {
+		return err
+	}
+
+	err = cn.flush('S')
+	if err != nil {
+		return err
+	}
+
 	m, err := cn.nextMsg()
 	if err != nil {
 		return err
@@ -71,17 +127,12 @@ func (cn *Conn) Startup(params Values) os.Error {
 		return fmt.Errorf("pq: unknown startup response (%c)", m.Type)
 	case 'E':
 		return m.err
-	case 'R':
-		switch m.status {
-		default:
-			return fmt.Errorf("pq: unknown authentication type (%d)", m.status)
-		case 0:
-			return nil
-		}
+	case '1':
 	}
 
-	panic("not reached")
+	return nil
 }
+
 
 func (cn *Conn) nextMsg() (*msg, os.Error) {
 	m, ok := <-cn.scr.msgs
