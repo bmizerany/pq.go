@@ -182,11 +182,21 @@ func (cn *Conn) Recv() os.Error {
 }
 
 func (cn *Conn) Complete() os.Error {
-	_, err := cn.waitFor('C')
+	m, err := cn.Next()
 	if err != nil {
 		return err
 	}
-	_, err = cn.waitFor('Z')
+	if m.Type != 'C' {
+		return notWanted('C', m.Type)
+	}
+
+	m, err = cn.Next()
+	if err != nil {
+		return err
+	}
+	if m.Type != 'Z' {
+		return notWanted('Z', m.Type)
+	}
 	return err
 }
 
@@ -212,30 +222,10 @@ func (cn *Conn) flush(t byte) os.Error {
 	return err
 }
 
-func (cn *Conn) waitFor(what ... byte) (*Msg, os.Error) {
-	m, err := cn.Next()
-	if err != nil {
-		return nil, err
-	}
-
-	err = m.parse()
-	if err != nil {
-		return nil, err
-	}
-
-	if m.Type == 'E' {
-		return nil, fmt.Errorf("pq: unknown response (%c)", m.Type)
-	}
-
-	for _, w := range what {
-		if m.Type == w {
-			return m, nil
-		}
-	}
-
-	return nil, fmt.Errorf("pq: wanted response %q, but got %c", what, m.Type)
-}
-
 func (cn *Conn) Close() os.Error {
 	return cn.wc.Close()
+}
+
+func notWanted(w, g byte) os.Error {
+	return fmt.Errorf("pq: response %c expected, but got %c", w, g)
 }
