@@ -29,6 +29,7 @@ func (m *Msg) parse() os.Error {
 		return fmt.Errorf("pq: unknown server response (%c)", m.Type)
 	case 'E':
 		m.Err = fmt.Errorf("pq: %s", m.String())
+		return nil // avoid the check at the end
 	case 'R':
 		m.Auth = int(m.ReadInt32())
 	case 'S':

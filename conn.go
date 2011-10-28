@@ -54,6 +54,9 @@ func (cn *Conn) Next() (*Msg, os.Error) {
 	if !ok {
 		return nil, cn.scr.err
 	}
+	if err := m.parse(); err != nil {
+		return nil, err
+	}
 	return m, nil
 }
 
@@ -76,16 +79,13 @@ func (cn *Conn) Startup(params Values) os.Error {
 			return err
 		}
 
-		err = m.parse()
-		if err != nil {
-			return err
+		if m.Err != nil {
+			return m.Err
 		}
 
 		switch m.Type {
 		default:
 			return fmt.Errorf("pq: unknown startup response (%c)", m.Type)
-		case 'E':
-			return m.Err
 		case 'R':
 			switch m.Auth {
 			default:
@@ -161,12 +161,16 @@ func (cn *Conn) Recv() os.Error {
 		return err
 	}
 
+	if m.Err != nil {
+		return m.Err
+	}
+
 	if m.Type == '2' {
 		return nil
 	}
 
 	if m.Type != '1' {
-		panic(fmt.Sprintf("pq: expected 1 but got %c", m.Type))
+		notWanted('1', m.Type)
 	}
 
 	m, err = cn.Next()
@@ -175,7 +179,7 @@ func (cn *Conn) Recv() os.Error {
 	}
 
 	if m.Type != '2' {
-		panic(fmt.Sprintf("pq: expected 2 but got %c", m.Type))
+		notWanted('2', m.Type)
 	}
 
 	return nil
@@ -187,7 +191,7 @@ func (cn *Conn) Complete() os.Error {
 		return err
 	}
 	if m.Type != 'C' {
-		return notWanted('C', m.Type)
+		notWanted('C', m.Type)
 	}
 
 	m, err = cn.Next()
@@ -195,7 +199,7 @@ func (cn *Conn) Complete() os.Error {
 		return err
 	}
 	if m.Type != 'Z' {
-		return notWanted('Z', m.Type)
+		notWanted('Z', m.Type)
 	}
 	return err
 }
@@ -226,6 +230,6 @@ func (cn *Conn) Close() os.Error {
 	return cn.wc.Close()
 }
 
-func notWanted(w, g byte) os.Error {
-	return fmt.Errorf("pq: response %c expected, but got %c", w, g)
+func notWanted(w, g byte) {
+	panic(fmt.Sprintf("pq: response %c expected, but got %c", w, g))
 }

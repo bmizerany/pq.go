@@ -58,10 +58,6 @@ func TestConnQuery(t *testing.T) {
 	assert.Equalf(t, nil, err, "%v", err)
 	assert.Equalf(t, byte('D'), m.Type, "%c", m.Type)
 
-	err = m.parse()
-	assert.Equalf(t, nil, err, "%v", err)
-	assert.Equal(t, "7", string(m.Cols[0]))
-
 	err = cn.Complete()
 	assert.Equalf(t, nil, err, "%v", err)
 
@@ -80,10 +76,31 @@ func TestConnQuery(t *testing.T) {
 	assert.Equalf(t, nil, err, "%v", err)
 	assert.Equalf(t, byte('D'), m.Type, "%c", m.Type)
 
-	err = m.parse()
-	assert.Equalf(t, nil, err, "%v", err)
-	assert.Equal(t, "6", string(m.Cols[0]))
-
 	err = cn.Complete()
 	assert.Equalf(t, nil, err, "%v", err)
+}
+
+func TestConnErr(t *testing.T) {
+	nc, err := net.Dial("tcp", "localhost:5432")
+	assert.Equalf(t, nil, err, "%v", err)
+	defer nc.Close()
+
+	cn := New(nc)
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Startup(Values{"user": os.Getenv("USER")})
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Parse("test", "SELECT length($1) ZOMG! ERROR")
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Bind("test", "test", "testing")
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Execute("test", 0)
+	assert.Equalf(t, nil, err, "%v", err)
+
+	// Errors don't come until we sync
+	err = cn.Recv()
+	assert.NotEqual(t, nil, err)
 }
