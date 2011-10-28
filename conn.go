@@ -8,6 +8,13 @@ import (
 	"os"
 )
 
+type Type byte
+
+const (
+	Statement = Type('S')
+	Portal    = Type('S')
+)
+
 const ProtoVersion = int32(196608)
 
 type Values map[string]string
@@ -142,75 +149,18 @@ func (cn *Conn) Execute(name string, rows int) os.Error {
 	return cn.flush('E')
 }
 
+func (cn *Conn) Describe(t Type, name string) os.Error {
+	cn.b.WriteByte(byte(t))
+	cn.b.WriteCString(name)
+	return cn.flush('D')
+}
+
 func (cn *Conn) Sync() os.Error {
 	err := cn.flush('S')
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func (cn *Conn) Recv() os.Error {
-	err := cn.Sync()
-	if err != nil {
-		return err
-	}
-
-	m, err := cn.Next()
-	if err != nil {
-		return err
-	}
-	if m.Err != nil {
-		err := cn.Ready()
-		if err != nil {
-			return err
-		}
-		return m.Err
-	}
-
-	if m.Type == '2' {
-		return nil
-	}
-
-	if m.Type != '1' {
-		notWanted(m.Type)
-	}
-
-	m, err = cn.Next()
-	if err != nil {
-		return err
-	}
-
-	if m.Type != '2' {
-		notWanted(m.Type)
-	}
-
-	return nil
-}
-
-func (cn *Conn) Ready() os.Error {
-	m, err := cn.Next()
-	if err != nil {
-		return err
-	}
-
-	if m.Type != 'Z' {
-		notWanted(m.Type)
-	}
-
-	return nil
-}
-
-func (cn *Conn) Complete() os.Error {
-	m, err := cn.Next()
-	if err != nil {
-		return err
-	}
-	if m.Type != 'C' {
-		notWanted(m.Type)
-	}
-
-	return cn.Ready()
 }
 
 func (cn *Conn) flush(t byte) os.Error {

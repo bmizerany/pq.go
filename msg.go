@@ -21,6 +21,7 @@ type Msg struct {
 	Pid, Secret int
 	Cols        [][]byte
 	Tag         string
+	Params      []int
 }
 
 func (m *Msg) parse() os.Error {
@@ -50,6 +51,11 @@ func (m *Msg) parse() os.Error {
 		}
 	case 'C':
 		m.Tag = m.ReadCString()
+	case 't':
+		m.Params = make([]int, int(m.ReadInt16()))
+		for i := 0; i < len(m.Params); i++ {
+			m.Params[i] = int(m.ReadInt32())
+		}
 	}
 
 	if m.Len() != 0 {
