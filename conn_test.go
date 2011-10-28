@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func TestConnPrepare(t *testing.T) {
+func TestConnPrepareErr(t *testing.T) {
 	nc, err := net.Dial("tcp", "localhost:5432")
 	assert.Equalf(t, nil, err, "%v", err)
 
@@ -15,5 +15,17 @@ func TestConnPrepare(t *testing.T) {
 	assert.Equalf(t, nil, err, "%v", err)
 
 	_, err = cn.Prepare("SELECT length($1) AS ZOMG! AN ERR")
+	assert.NotEqual(t, nil, err)
+}
+
+func TestConnPrepare(t *testing.T) {
+	nc, err := net.Dial("tcp", "localhost:5432")
 	assert.Equalf(t, nil, err, "%v", err)
+
+	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")})
+	assert.Equalf(t, nil, err, "%v", err)
+
+	stmt, err := cn.Prepare("SELECT length($1) AS foo")
+	assert.Equalf(t, nil, err, "%v", err)
+	assert.Equal(t, 1, stmt.NumInput())
 }
