@@ -240,3 +240,6 @@ func (cn *Conn) waitFor(what ... byte) (*msg, os.Error) {
 	return nil, fmt.Errorf("pq: wanted response %q, but got %c", what, m.Type)
 }
 
+func (cn *Conn) Close() os.Error {
+	return cn.wc.Close()
+}
