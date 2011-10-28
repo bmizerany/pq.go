@@ -239,13 +239,18 @@ func (r *Rows) Columns() []string {
 	return r.names
 }
 
-func (r *Rows) Next(dest []interface{}) os.Error {
+func (r *Rows) Next(dest []interface{}) (err os.Error) {
 	if r.err != nil {
 		return r.err
 	}
 
+	defer func() {
+		r.err = err
+	}()
+
+	var m *proto.Msg
 	for {
-		m, err := r.p.Next()
+		m, err = r.p.Next()
 		if err != nil {
 			return err
 		}
@@ -264,8 +269,7 @@ func (r *Rows) Next(dest []interface{}) os.Error {
 		case 'C':
 			r.c++
 		case 'Z':
-			r.err = os.EOF
-			return r.err
+			return os.EOF
 		}
 	}
 

@@ -40,4 +40,6 @@ func TestConnPrepare(t *testing.T) {
 
 	err = rows.Next(dest)
 	assert.Equalf(t, os.EOF, err, "%v", err)
+	err = rows.Next(dest)
+	assert.Equalf(t, os.EOF, err, "%v", err)
 }
