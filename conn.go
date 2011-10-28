@@ -8,6 +8,10 @@ import (
 	"os"
 )
 
+var (
+	ErrNotWanted = os.NewError("pq: response wanted was not the response given")
+)
+
 const ProtoVersion = int32(196608)
 
 type Values map[string]string
@@ -31,6 +35,7 @@ type Conn struct {
 	Settings Values
 	Pid int
 	Secret int
+	Status byte
 
 	b   *buffer.Buffer
 	scr *scanner
@@ -48,6 +53,14 @@ func New(rwc io.ReadWriteCloser) *Conn {
 	return cn
 }
 
+func (cn *Conn) Next() (*msg, os.Error) {
+	m, ok := <-cn.scr.msgs
+	if !ok {
+		return nil, cn.scr.err
+	}
+	return m, nil
+}
+
 func (cn *Conn) Startup(params Values) os.Error {
 	cn.b.WriteInt32(ProtoVersion)
 	for k, v := range params {
@@ -62,7 +75,7 @@ func (cn *Conn) Startup(params Values) os.Error {
 	}
 
 	for {
-		m, err := cn.nextMsg()
+		m, err := cn.Next()
 		if err != nil {
 			return err
 		}
@@ -101,45 +114,84 @@ func (cn *Conn) Parse(name, query string) os.Error {
 	cn.b.WriteCString(name)
 	cn.b.WriteCString(query)
 	cn.b.WriteInt16(0)
+	return cn.flush('P')
+}
 
-	err := cn.flush('P')
+func (cn *Conn) Bind(portal, stmt string, args ... string) os.Error {
+	cn.b.WriteCString(portal)
+	cn.b.WriteCString(stmt)
+
+	// TODO: Use format codes; maybe?
+	//       some thought needs to be put into the design of this.
+	//       See (Bind) http://developer.postgresql.org/pgdocs/postgres/protocol-message-formats.html
+	cn.b.WriteInt16(0)
+
+	cn.b.WriteInt16(int16(len(args)))
+	for _, arg := range args {
+		cn.b.WriteInt32(int32(len(arg)))
+		cn.b.WriteString(arg)
+	}
+
+	// TODO: Use result format codes; maybe?
+	//       some thought needs to be put into the design of this.
+	//       See (Bind) http://developer.postgresql.org/pgdocs/postgres/protocol-message-formats.html
+	cn.b.WriteInt16(0)
+
+	return cn.flush('B')
+}
+
+func (cn *Conn) Execute(name string, rows int) os.Error {
+	cn.b.WriteCString(name)
+	cn.b.WriteInt32(int32(rows))
+	return cn.flush('E')
+}
+
+func (cn *Conn) Sync() os.Error {
+	err := cn.flush('S')
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cn *Conn) Recv() os.Error {
+	err := cn.Sync()
 	if err != nil {
 		return err
 	}
 
-	err = cn.flush('S')
+	m, err := cn.Next()
 	if err != nil {
 		return err
 	}
 
-	m, err := cn.nextMsg()
+	if m.Type == '2' {
+		return nil
+	}
+
+	if m.Type != '1' {
+		panic(fmt.Sprintf("pq: expected 1 but got %c", m.Type))
+	}
+
+	m, err = cn.Next()
 	if err != nil {
 		return err
 	}
 
-	err = m.parse()
-	if err != nil {
-		return err
-	}
-
-	switch m.Type {
-	default:
-		return fmt.Errorf("pq: unknown startup response (%c)", m.Type)
-	case 'E':
-		return m.err
-	case '1':
+	if m.Type != '2' {
+		panic(fmt.Sprintf("pq: expected 2 but got %c", m.Type))
 	}
 
 	return nil
 }
 
-
-func (cn *Conn) nextMsg() (*msg, os.Error) {
-	m, ok := <-cn.scr.msgs
-	if !ok {
-		return nil, cn.scr.err
+func (cn *Conn) Complete() os.Error {
+	_, err := cn.waitFor('C')
+	if err != nil {
+		return err
 	}
-	return m, nil
+	_, err = cn.waitFor('Z')
+	return err
 }
 
 func (cn *Conn) flush(t byte) os.Error {
@@ -163,3 +215,28 @@ func (cn *Conn) flush(t byte) os.Error {
 
 	return err
 }
+
+func (cn *Conn) waitFor(what ... byte) (*msg, os.Error) {
+	m, err := cn.Next()
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.parse()
+	if err != nil {
+		return nil, err
+	}
+
+	if m.Type == 'E' {
+		return nil, fmt.Errorf("pq: unknown response (%c)", m.Type)
+	}
+
+	for _, w := range what {
+		if m.Type == w {
+			return m, nil
+		}
+	}
+
+	return nil, fmt.Errorf("pq: wanted response %q, but got %c", what, m.Type)
+}
+

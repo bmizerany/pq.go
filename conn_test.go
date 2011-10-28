@@ -42,6 +42,48 @@ func TestConnQuery(t *testing.T) {
 	err = cn.Startup(Values{"user": os.Getenv("USER")})
 	assert.Equalf(t, nil, err, "%v", err)
 
-	err = cn.Parse("test", "SELECT 1 AS foo")
+	err = cn.Parse("test", "SELECT length($1) AS foo")
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Bind("test", "test", "testing")
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Execute("test", 0)
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Recv()
+	assert.Equalf(t, nil, err, "%v", err)
+
+	m, err := cn.Next()
+	assert.Equalf(t, nil, err, "%v", err)
+	assert.Equalf(t, byte('D'), m.Type, "%c", m.Type)
+
+	err = m.parse()
+	assert.Equalf(t, nil, err, "%v", err)
+	assert.Equal(t, "7", string(m.cols[0]))
+
+	err = cn.Complete()
+	assert.Equalf(t, nil, err, "%v", err)
+
+	// Query 2
+
+	err = cn.Bind("test", "test", "foobar")
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Execute("test", 0)
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = cn.Recv()
+	assert.Equalf(t, nil, err, "%v", err)
+
+	m, err = cn.Next()
+	assert.Equalf(t, nil, err, "%v", err)
+	assert.Equalf(t, byte('D'), m.Type, "%c", m.Type)
+
+	err = m.parse()
+	assert.Equalf(t, nil, err, "%v", err)
+	assert.Equal(t, "6", string(m.cols[0]))
+
+	err = cn.Complete()
 	assert.Equalf(t, nil, err, "%v", err)
 }
