@@ -85,7 +85,7 @@ func (cn *Conn) Startup(params Values) os.Error {
 
 		switch m.Type {
 		default:
-			return fmt.Errorf("pq: unknown startup response (%c)", m.Type)
+			notWanted(m.Type)
 		case 'R':
 			switch m.Auth {
 			default:
