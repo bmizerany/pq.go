@@ -1,4 +1,4 @@
-package buffer
+package proto
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ type Buffer struct {
 	*bytes.Buffer
 }
 
-func New(b []byte) *Buffer {
+func NewBuffer(b []byte) *Buffer {
 	return &Buffer{bytes.NewBuffer(b)}
 }
 

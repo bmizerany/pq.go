@@ -4,8 +4,9 @@ include $(GOROOT)/src/Make.inc
 
 TARG=github.com/bmizerany/pq.go/proto
 GOFILES=\
-	proto.go\
+	buffer.go\
 	msg.go\
+	proto.go\
 	scan.go\
 
 include $(GOROOT)/src/Make.pkg

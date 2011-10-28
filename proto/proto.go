@@ -1,9 +1,8 @@
-package pq
+package proto
 
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/bmizerany/pq.go/buffer"
 	"io"
 	"os"
 )
@@ -40,7 +39,7 @@ type Conn struct {
 	Secret   int
 	Status   byte
 
-	b   *buffer.Buffer
+	b   *Buffer
 	scr *scanner
 	wc  io.ReadWriteCloser
 }
@@ -48,7 +47,7 @@ type Conn struct {
 func New(rwc io.ReadWriteCloser) *Conn {
 	cn := &Conn{
 		Settings: make(Values),
-		b:        buffer.New(nil),
+		b:        NewBuffer(nil),
 		wc:       rwc,
 		scr:      scan(rwc),
 	}

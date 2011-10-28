@@ -1,8 +1,7 @@
-package pq
+package proto
 
 import (
 	"fmt"
-	buffer "github.com/bmizerany/pq.go/buffer"
 	"os"
 )
 
@@ -13,7 +12,7 @@ type Header struct {
 
 type Msg struct {
 	Header
-	*buffer.Buffer
+	*Buffer
 	Err         os.Error
 	Auth        int
 	Status      byte

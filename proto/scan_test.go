@@ -1,4 +1,4 @@
-package pq
+package proto
 
 import (
 	"bytes"

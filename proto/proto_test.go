@@ -1,4 +1,4 @@
-package pq
+package proto
 
 import (
 	"github.com/bmizerany/assert"

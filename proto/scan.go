@@ -1,9 +1,8 @@
-package pq
+package proto
 
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/bmizerany/pq.go/buffer"
 	"io"
 	"os"
 )
@@ -47,7 +46,7 @@ func (s *scanner) run(msgs chan<- *Msg) {
 			return
 		}
 
-		m.Buffer = &buffer.Buffer{bytes.NewBuffer(b)}
+		m.Buffer = &Buffer{bytes.NewBuffer(b)}
 
 		msgs <- m
 	}
