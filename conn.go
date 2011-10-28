@@ -29,9 +29,9 @@ func (vs Values) Del(k string) {
 
 type Conn struct {
 	Settings Values
-	Pid int
-	Secret int
-	Status byte
+	Pid      int
+	Secret   int
+	Status   byte
 
 	b   *buffer.Buffer
 	scr *scanner
@@ -41,9 +41,9 @@ type Conn struct {
 func New(rwc io.ReadWriteCloser) *Conn {
 	cn := &Conn{
 		Settings: make(Values),
-		b:   buffer.New(nil),
-		wc:  rwc,
-		scr: scan(rwc),
+		b:        buffer.New(nil),
+		wc:       rwc,
+		scr:      scan(rwc),
 	}
 
 	return cn
@@ -113,7 +113,7 @@ func (cn *Conn) Parse(name, query string) os.Error {
 	return cn.flush('P')
 }
 
-func (cn *Conn) Bind(portal, stmt string, args ... string) os.Error {
+func (cn *Conn) Bind(portal, stmt string, args ...string) os.Error {
 	cn.b.WriteCString(portal)
 	cn.b.WriteCString(stmt)
 

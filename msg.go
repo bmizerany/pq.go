@@ -7,20 +7,20 @@ import (
 )
 
 type Header struct {
-	Type byte
+	Type   byte
 	Length int32
 }
 
 type Msg struct {
 	Header
 	*buffer.Buffer
-	Err os.Error
-	Auth int
-	Status byte
-	Key, Val string
+	Err         os.Error
+	Auth        int
+	Status      byte
+	Key, Val    string
 	Pid, Secret int
-	Cols [][]byte
-	Tag string
+	Cols        [][]byte
+	Tag         string
 }
 
 func (m *Msg) parse() os.Error {

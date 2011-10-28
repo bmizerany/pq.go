@@ -20,7 +20,7 @@ func (l *lrwc) Read(b []byte) (int, os.Error) {
 	return l.rwc.Read(b)
 }
 
-func (l *lrwc) Close() (os.Error) {
+func (l *lrwc) Close() os.Error {
 	fmt.Println("<closed>")
 	return l.rwc.Close()
 }

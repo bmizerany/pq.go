@@ -51,7 +51,7 @@ func (b *Buffer) ReadInt16() (i int16) {
 		panic(err) // TODO: probably shouldn't panic
 	}
 
-	i  = int16(tmp[0])<<8
+	i = int16(tmp[0]) << 8
 	i |= int16(tmp[1])
 	return
 }
@@ -63,9 +63,9 @@ func (b *Buffer) ReadInt32() (i int32) {
 		panic(err) // TODO: probably shouldn't panic
 	}
 
-	i  = int32(tmp[0])<<24
-	i |= int32(tmp[1])<<16
-	i |= int32(tmp[2])<<8
+	i = int32(tmp[0]) << 24
+	i |= int32(tmp[1]) << 16
+	i |= int32(tmp[2]) << 8
 	i |= int32(tmp[3])
 
 	return
