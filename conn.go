@@ -163,7 +163,7 @@ func (stmt *Stmt) Describe() os.Error {
 }
 
 func (stmt *Stmt) Close() os.Error {
-	return nil
+	panic("todo")
 }
 
 func (stmt *Stmt) NumInput() int {
@@ -171,7 +171,7 @@ func (stmt *Stmt) NumInput() int {
 }
 
 func (stmt *Stmt) Exec(args []interface{}) (driver.Result, os.Error) {
-	return nil, nil
+	panic("todo")
 }
 
 func (stmt *Stmt) Query(args []interface{}) (driver.Rows, os.Error) {
