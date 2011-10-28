@@ -36,7 +36,7 @@ func TestConnQuery(t *testing.T) {
 	assert.Equalf(t, nil, err, "%v", err)
 	defer nc.Close()
 
-	cn := New(&lrwc{nc})
+	cn := New(nc)
 	assert.Equalf(t, nil, err, "%v", err)
 
 	err = cn.Startup(Values{"user": os.Getenv("USER")})
