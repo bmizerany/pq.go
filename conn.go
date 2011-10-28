@@ -64,7 +64,7 @@ func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, os.Error) {
 }
 
 func (cn *Conn) Prepare(query string) (driver.Stmt, os.Error) {
-	name := query //TODO: use something unique and smaller
+	name := "" //TODO: support named queries
 
 	stmt := &Stmt{
 		Name:  name,
