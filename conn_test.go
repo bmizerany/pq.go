@@ -60,7 +60,7 @@ func TestConnQuery(t *testing.T) {
 
 	err = m.parse()
 	assert.Equalf(t, nil, err, "%v", err)
-	assert.Equal(t, "7", string(m.cols[0]))
+	assert.Equal(t, "7", string(m.Cols[0]))
 
 	err = cn.Complete()
 	assert.Equalf(t, nil, err, "%v", err)
@@ -82,7 +82,7 @@ func TestConnQuery(t *testing.T) {
 
 	err = m.parse()
 	assert.Equalf(t, nil, err, "%v", err)
-	assert.Equal(t, "6", string(m.cols[0]))
+	assert.Equal(t, "6", string(m.Cols[0]))
 
 	err = cn.Complete()
 	assert.Equalf(t, nil, err, "%v", err)

@@ -12,12 +12,12 @@ const sizeOfInt32 = int32(32 / 8)
 
 type scanner struct {
 	r    io.Reader
-	msgs <-chan *msg
+	msgs <-chan *Msg
 	err  os.Error
 }
 
 func scan(r io.Reader) *scanner {
-	msgs := make(chan *msg)
+	msgs := make(chan *Msg)
 	s := &scanner{r: r, msgs: msgs}
 
 	go s.run(msgs)
@@ -25,7 +25,7 @@ func scan(r io.Reader) *scanner {
 	return s
 }
 
-func (s *scanner) run(msgs chan<- *msg) {
+func (s *scanner) run(msgs chan<- *Msg) {
 	var err os.Error
 	defer func() {
 		s.err = err
@@ -33,9 +33,9 @@ func (s *scanner) run(msgs chan<- *msg) {
 	}()
 
 	for {
-		m := new(msg)
+		m := new(Msg)
 
-		err = binary.Read(s.r, binary.BigEndian, &m.header)
+		err = binary.Read(s.r, binary.BigEndian, &m.Header)
 		if err != nil {
 			return
 		}

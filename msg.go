@@ -6,54 +6,49 @@ import (
 	"os"
 )
 
-type header struct {
+type Header struct {
 	Type byte
 	Length int32
 }
 
-type msg struct {
-	header
+type Msg struct {
+	Header
 	*buffer.Buffer
-	err os.Error
-
-	auth int
-
-	status byte
-
-	key, val string
-	pid, secret int
-
-	cols [][]byte
-
-	tag string
+	Err os.Error
+	Auth int
+	Status byte
+	Key, Val string
+	Pid, Secret int
+	Cols [][]byte
+	Tag string
 }
 
-func (m *msg) parse() os.Error {
+func (m *Msg) parse() os.Error {
 	switch m.Type {
 	default:
 		return fmt.Errorf("pq: unknown server response (%c)", m.Type)
 	case 'E':
-		m.err = fmt.Errorf("pq: %s", m.String())
+		m.Err = fmt.Errorf("pq: %s", m.String())
 	case 'R':
-		m.auth = int(m.ReadInt32())
+		m.Auth = int(m.ReadInt32())
 	case 'S':
-		m.key = m.ReadCString()
-		m.val = m.ReadCString()
+		m.Key = m.ReadCString()
+		m.Val = m.ReadCString()
 	case 'K':
-		m.pid = int(m.ReadInt32())
-		m.secret = int(m.ReadInt32())
+		m.Pid = int(m.ReadInt32())
+		m.Secret = int(m.ReadInt32())
 	case 'Z':
-		m.status = m.ReadByte()
+		m.Status = m.ReadByte()
 	case '1', '2':
 		// Nothing to read
 	case 'D':
-		m.cols = make([][]byte, int(m.ReadInt16()))
-		for i := 0; i < len(m.cols); i++ {
-			m.cols[i] = make([]byte, int(m.ReadInt32()))
-			m.Read(m.cols[i])
+		m.Cols = make([][]byte, int(m.ReadInt16()))
+		for i := 0; i < len(m.Cols); i++ {
+			m.Cols[i] = make([]byte, int(m.ReadInt32()))
+			m.Read(m.Cols[i])
 		}
 	case 'C':
-		m.tag = m.ReadCString()
+		m.Tag = m.ReadCString()
 	}
 
 	if m.Len() != 0 {

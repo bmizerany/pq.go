@@ -53,7 +53,7 @@ func New(rwc io.ReadWriteCloser) *Conn {
 	return cn
 }
 
-func (cn *Conn) Next() (*msg, os.Error) {
+func (cn *Conn) Next() (*Msg, os.Error) {
 	m, ok := <-cn.scr.msgs
 	if !ok {
 		return nil, cn.scr.err
@@ -89,19 +89,19 @@ func (cn *Conn) Startup(params Values) os.Error {
 		default:
 			return fmt.Errorf("pq: unknown startup response (%c)", m.Type)
 		case 'E':
-			return m.err
+			return m.Err
 		case 'R':
-			switch m.auth {
+			switch m.Auth {
 			default:
-				return fmt.Errorf("pq: unknown authentication type (%d)", m.status)
+				return fmt.Errorf("pq: unknown authentication type (%d)", m.Status)
 			case 0:
 				continue
 			}
 		case 'S':
-			cn.Settings.Set(m.key, m.val)
+			cn.Settings.Set(m.Key, m.Val)
 		case 'K':
-			cn.Pid = m.pid
-			cn.Pid = m.secret
+			cn.Pid = m.Pid
+			cn.Pid = m.Secret
 		case 'Z':
 			return nil
 		}
@@ -216,7 +216,7 @@ func (cn *Conn) flush(t byte) os.Error {
 	return err
 }
 
-func (cn *Conn) waitFor(what ... byte) (*msg, os.Error) {
+func (cn *Conn) waitFor(what ... byte) (*Msg, os.Error) {
 	m, err := cn.Next()
 	if err != nil {
 		return nil, err
