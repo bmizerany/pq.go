@@ -160,8 +160,11 @@ func (cn *Conn) Recv() os.Error {
 	if err != nil {
 		return err
 	}
-
 	if m.Err != nil {
+		err := cn.Ready()
+		if err != nil {
+			return err
+		}
 		return m.Err
 	}
 
@@ -180,6 +183,19 @@ func (cn *Conn) Recv() os.Error {
 
 	if m.Type != '2' {
 		notWanted('2', m.Type)
+	}
+
+	return nil
+}
+
+func (cn *Conn) Ready() os.Error {
+	m, err := cn.Next()
+	if err != nil {
+		return err
+	}
+
+	if m.Type != 'Z' {
+		notWanted('Z', m.Type)
 	}
 
 	return nil
