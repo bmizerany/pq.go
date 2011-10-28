@@ -54,7 +54,7 @@ func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, os.Error) {
 			cn.Settings.Set(m.Key, m.Val)
 		case 'K':
 			cn.Pid = m.Pid
-			cn.Pid = m.Secret
+			cn.Secret = m.Secret
 		case 'Z':
 			return cn, nil
 		}
