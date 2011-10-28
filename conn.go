@@ -8,10 +8,6 @@ import (
 	"os"
 )
 
-var (
-	ErrNotWanted = os.NewError("pq: response wanted was not the response given")
-)
-
 const ProtoVersion = int32(196608)
 
 type Values map[string]string
