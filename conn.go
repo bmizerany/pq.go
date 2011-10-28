@@ -210,14 +210,7 @@ func (cn *Conn) Complete() os.Error {
 		notWanted(m.Type)
 	}
 
-	m, err = cn.Next()
-	if err != nil {
-		return err
-	}
-	if m.Type != 'Z' {
-		notWanted(m.Type)
-	}
-	return err
+	return cn.Ready()
 }
 
 func (cn *Conn) flush(t byte) os.Error {
