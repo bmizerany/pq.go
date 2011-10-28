@@ -2,7 +2,6 @@ package proto
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 	"os"
 )
@@ -34,11 +33,6 @@ func (vs Values) Del(k string) {
 }
 
 type Conn struct {
-	Settings Values
-	Pid      int
-	Secret   int
-	Status   byte
-
 	b   *Buffer
 	scr *scanner
 	wc  io.ReadWriteCloser
@@ -46,10 +40,9 @@ type Conn struct {
 
 func New(rwc io.ReadWriteCloser) *Conn {
 	cn := &Conn{
-		Settings: make(Values),
-		b:        NewBuffer(nil),
-		wc:       rwc,
-		scr:      scan(rwc),
+		b:   NewBuffer(nil),
+		wc:  rwc,
+		scr: scan(rwc),
 	}
 
 	return cn
@@ -73,43 +66,7 @@ func (cn *Conn) Startup(params Values) os.Error {
 		cn.b.WriteCString(v)
 	}
 	cn.b.WriteCString("")
-
-	err := cn.flush(0)
-	if err != nil {
-		return err
-	}
-
-	for {
-		m, err := cn.Next()
-		if err != nil {
-			return err
-		}
-
-		if m.Err != nil {
-			return m.Err
-		}
-
-		switch m.Type {
-		default:
-			notWanted(m.Type)
-		case 'R':
-			switch m.Auth {
-			default:
-				return fmt.Errorf("pq: unknown authentication type (%d)", m.Status)
-			case 0:
-				continue
-			}
-		case 'S':
-			cn.Settings.Set(m.Key, m.Val)
-		case 'K':
-			cn.Pid = m.Pid
-			cn.Pid = m.Secret
-		case 'Z':
-			return nil
-		}
-	}
-
-	panic("not reached")
+	return cn.flush(0)
 }
 
 func (cn *Conn) Parse(name, query string) os.Error {
@@ -186,8 +143,4 @@ func (cn *Conn) flush(t byte) os.Error {
 
 func (cn *Conn) Close() os.Error {
 	return cn.wc.Close()
-}
-
-func notWanted(c byte) {
-	panic(fmt.Sprintf("pq: unwanted response from server (%c)", c))
 }
