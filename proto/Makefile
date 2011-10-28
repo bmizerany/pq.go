@@ -2,7 +2,10 @@
 GOROOT ?= $(shell printf 't:;@echo $$(GOROOT)\n' | gomake -f -)
 include $(GOROOT)/src/Make.inc
 
-TARG=github.com/bmizerany/pq.go
+TARG=github.com/bmizerany/pq.go/proto
 GOFILES=\
+	proto.go\
+	msg.go\
+	scan.go\
 
 include $(GOROOT)/src/Make.pkg
