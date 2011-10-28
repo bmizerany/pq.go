@@ -5,5 +5,6 @@ include $(GOROOT)/src/Make.inc
 TARG=github.com/bmizerany/pq.go
 GOFILES=\
 	conn.go\
+	encode.go\
 
 include $(GOROOT)/src/Make.pkg

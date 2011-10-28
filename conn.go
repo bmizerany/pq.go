@@ -176,10 +176,7 @@ func (stmt *Stmt) Exec(args []interface{}) (driver.Result, os.Error) {
 
 func (stmt *Stmt) Query(args []interface{}) (driver.Rows, os.Error) {
 	// For now, we'll just say they're strings
-	sargs := make([]string, len(args))
-	for i, s := range(args) {
-		sargs[i] = s.(string)
-	}
+	sargs := encodeParams(args)
 
 	err := stmt.p.Bind(stmt.Name, stmt.Name, sargs...)
 	if err != nil {

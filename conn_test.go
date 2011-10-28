@@ -25,11 +25,11 @@ func TestConnPrepare(t *testing.T) {
 	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")})
 	assert.Equalf(t, nil, err, "%v", err)
 
-	stmt, err := cn.Prepare("SELECT length($1) AS foo")
+	stmt, err := cn.Prepare("SELECT length($1) AS foo WHERE true = $2")
 	assert.Equalf(t, nil, err, "%v", err)
-	assert.Equal(t, 1, stmt.NumInput())
+	assert.Equal(t, 2, stmt.NumInput())
 
-	rows, err := stmt.Query([]interface{}{"testing"})
+	rows, err := stmt.Query([]interface{}{"testing", true})
 	assert.Equalf(t, nil, err, "%v", err)
 	assert.Equal(t, []string{"foo"}, rows.Columns())
 
@@ -40,6 +40,13 @@ func TestConnPrepare(t *testing.T) {
 
 	err = rows.Next(dest)
 	assert.Equalf(t, os.EOF, err, "%v", err)
+	err = rows.Next(dest)
+	assert.Equalf(t, os.EOF, err, "%v", err)
+
+	rows, err = stmt.Query([]interface{}{"testing", false})
+	assert.Equalf(t, nil, err, "%v", err)
+	assert.Equal(t, []string{"foo"}, rows.Columns())
+
 	err = rows.Next(dest)
 	assert.Equalf(t, os.EOF, err, "%v", err)
 }
