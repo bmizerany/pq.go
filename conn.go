@@ -173,7 +173,7 @@ func (cn *Conn) Recv() os.Error {
 	}
 
 	if m.Type != '1' {
-		notWanted('1', m.Type)
+		notWanted(m.Type)
 	}
 
 	m, err = cn.Next()
@@ -182,7 +182,7 @@ func (cn *Conn) Recv() os.Error {
 	}
 
 	if m.Type != '2' {
-		notWanted('2', m.Type)
+		notWanted(m.Type)
 	}
 
 	return nil
@@ -195,7 +195,7 @@ func (cn *Conn) Ready() os.Error {
 	}
 
 	if m.Type != 'Z' {
-		notWanted('Z', m.Type)
+		notWanted(m.Type)
 	}
 
 	return nil
@@ -207,7 +207,7 @@ func (cn *Conn) Complete() os.Error {
 		return err
 	}
 	if m.Type != 'C' {
-		notWanted('C', m.Type)
+		notWanted(m.Type)
 	}
 
 	m, err = cn.Next()
@@ -215,7 +215,7 @@ func (cn *Conn) Complete() os.Error {
 		return err
 	}
 	if m.Type != 'Z' {
-		notWanted('Z', m.Type)
+		notWanted(m.Type)
 	}
 	return err
 }
@@ -246,6 +246,6 @@ func (cn *Conn) Close() os.Error {
 	return cn.wc.Close()
 }
 
-func notWanted(w, g byte) {
-	panic(fmt.Sprintf("pq: response %c expected, but got %c", w, g))
+func notWanted(c byte) {
+	panic(fmt.Sprintf("pq: unwanted response from server (%c)", c))
 }
