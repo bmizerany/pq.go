@@ -28,4 +28,16 @@ func TestConnPrepare(t *testing.T) {
 	stmt, err := cn.Prepare("SELECT length($1) AS foo")
 	assert.Equalf(t, nil, err, "%v", err)
 	assert.Equal(t, 1, stmt.NumInput())
+
+	rows, err := stmt.Query([]interface{}{"testing"})
+	assert.Equalf(t, nil, err, "%v", err)
+	assert.Equal(t, []string{"foo"}, rows.Columns())
+
+	dest := make([]interface{}, 1)
+	err = rows.Next(dest)
+	assert.Equalf(t, nil, err, "%v", err)
+	assert.Equal(t, []interface{}{"7"}, dest)
+
+	err = rows.Next(dest)
+	assert.Equalf(t, os.EOF, err, "%v", err)
 }

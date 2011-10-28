@@ -175,7 +175,101 @@ func (stmt *Stmt) Exec(args []interface{}) (driver.Result, os.Error) {
 }
 
 func (stmt *Stmt) Query(args []interface{}) (driver.Rows, os.Error) {
-	return nil, nil
+	// For now, we'll just say they're strings
+	sargs := make([]string, len(args))
+	for i, s := range(args) {
+		sargs[i] = s.(string)
+	}
+
+	err := stmt.p.Bind(stmt.Name, stmt.Name, sargs...)
+	if err != nil {
+		return nil, err
+	}
+
+	err = stmt.p.Execute(stmt.Name, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	err = stmt.p.Sync()
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		m, err := stmt.p.Next()
+		if err != nil {
+			return nil, err
+		}
+		if m.Err != nil {
+			return nil, m.Err
+		}
+
+		switch m.Type {
+		default:
+			notExpected(m.Type)
+		case '2':
+			rows := &Rows{
+				p:     stmt.p,
+				names: stmt.names,
+			}
+			return rows, nil
+		}
+	}
+
+	panic("not reached")
+}
+
+type Rows struct {
+	p *proto.Conn
+	names []string
+	err os.Error
+	c int
+}
+
+func (r *Rows) Close() os.Error {
+	return nil
+}
+
+func (r *Rows) Complete() int {
+	return r.c
+}
+
+func (r *Rows) Columns() []string {
+	return r.names
+}
+
+func (r *Rows) Next(dest []interface{}) os.Error {
+	if r.err != nil {
+		return r.err
+	}
+
+	for {
+		m, err := r.p.Next()
+		if err != nil {
+			return err
+		}
+		if m.Err != nil {
+			return m.Err
+		}
+
+		switch m.Type {
+		default:
+			notExpected(m.Type)
+		case 'D':
+			for i := 0; i < len(dest); i++ {
+				dest[i] = string(m.Cols[i])
+			}
+			return nil
+		case 'C':
+			r.c++
+		case 'Z':
+			r.err = os.EOF
+			return r.err
+		}
+	}
+
+	panic("not reached")
 }
 
 func notExpected(c byte) {
