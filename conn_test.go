@@ -40,8 +40,6 @@ func TestConnPrepare(t *testing.T) {
 
 	err = rows.Next(dest)
 	assert.Equalf(t, os.EOF, err, "%v", err)
-	err = rows.Next(dest)
-	assert.Equalf(t, os.EOF, err, "%v", err)
 
 	rows, err = stmt.Query([]interface{}{"testing", false})
 	assert.Equalf(t, nil, err, "%v", err)

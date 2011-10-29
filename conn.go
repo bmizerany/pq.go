@@ -204,10 +204,6 @@ func (stmt *Stmt) Describe() os.Error {
 }
 
 func (stmt *Stmt) Close() (err os.Error) {
-	defer func() {
-		stmt.err = err
-	}()
-
 	err = stmt.p.Close(proto.Statement, stmt.Name)
 	if err != nil {
 		return err
@@ -294,22 +290,18 @@ func (stmt *Stmt) Query(args []interface{}) (driver.Rows, os.Error) {
 type Rows struct {
 	p *proto.Conn
 	names []string
-	err os.Error
 	c int
-	closed bool
 }
 
-func (r *Rows) Close() os.Error {
-	r.closed = true
-
+func (r *Rows) Close() (err os.Error) {
 	// Drain the remaining rows
-	for r.err != nil { r.err = r.Next(nil) }
+	for err == nil { err = r.Next(nil) }
 
-	if r.err == os.EOF {
+	if err == os.EOF {
 		return nil
 	}
 
-	return r.err
+	return
 }
 
 func (r *Rows) Complete() int {
@@ -321,18 +313,6 @@ func (r *Rows) Columns() []string {
 }
 
 func (r *Rows) Next(dest []interface{}) (err os.Error) {
-	if r.err != nil {
-		return r.err
-	}
-
-	if r.closed {
-		return os.NewError("pq: cursor already closed")
-	}
-
-	defer func() {
-		r.err = err
-	}()
-
 	var m *proto.Msg
 	for {
 		m, err = r.p.Next()
