@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	"os"
+	"log"
 )
 
 const sizeOfInt32 = int32(32 / 8)
@@ -58,6 +59,9 @@ func (s *scanner) run(msgs chan<- *Msg) {
 		switch m.Type {
 		default:
 			msgs <- m
+		case 'N':
+			m.parse()
+			log.Println("pq: NOTICE (%c) %s", m.Status, m.Message)
 		case 'A': // Notification
 			m.parse()
 			s.notifies <- &Notify{m.Pid, m.From, m.Payload}

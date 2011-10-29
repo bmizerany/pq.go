@@ -24,6 +24,7 @@ type Msg struct {
 	Params      []int
 	From        string
 	Payload     string
+	Message     string
 }
 
 func (m *Msg) parse() os.Error {
@@ -31,7 +32,8 @@ func (m *Msg) parse() os.Error {
 	default:
 		return fmt.Errorf("pq: unknown server response (%c)", m.Type)
 	case 'E':
-		m.Err = fmt.Errorf("pq: %s", m.String())
+		m.Status = m.ReadByte()
+		m.Err = fmt.Errorf("pq: (%c) %s", m.Status, m.String())
 		return nil // avoid the check at the end
 	case 'R':
 		m.Auth = int(m.ReadInt32())
@@ -78,6 +80,10 @@ func (m *Msg) parse() os.Error {
 		m.Payload = m.ReadCString()
 	case '3':
 		// ignore
+	case 'N':
+		m.Status = m.ReadByte()
+		m.Message = m.String()
+		return nil // avoid len check
 	}
 
 	if m.Len() != 0 {
