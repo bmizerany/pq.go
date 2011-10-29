@@ -1,2 +1,2 @@
-cd proto && make nuke install
-make nuke install
+(cd proto && make nuke install)
+(make nuke install)
