@@ -119,6 +119,12 @@ func (cn *Conn) Sync() os.Error {
 	return nil
 }
 
+func (cn *Conn) Close(t Type, name string) os.Error {
+	cn.b.WriteByte(byte(t))
+	cn.b.WriteCString(name)
+	return cn.flush('C')
+}
+
 func (cn *Conn) flush(t byte) os.Error {
 	if t > 0 {
 		err := binary.Write(cn.wc, binary.BigEndian, t)
@@ -139,8 +145,4 @@ func (cn *Conn) flush(t byte) os.Error {
 	}
 
 	return err
-}
-
-func (cn *Conn) Close() os.Error {
-	return cn.wc.Close()
 }

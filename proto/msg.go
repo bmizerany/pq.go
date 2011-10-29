@@ -76,6 +76,8 @@ func (m *Msg) parse() os.Error {
 		m.Pid = int(m.ReadInt32())
 		m.From = m.ReadCString()
 		m.Payload = m.ReadCString()
+	case '3':
+		// ignore
 	}
 
 	if m.Len() != 0 {

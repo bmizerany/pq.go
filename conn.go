@@ -130,6 +130,7 @@ type Stmt struct {
 	p      *proto.Conn
 	params []int
 	names  []string
+	err    os.Error
 }
 
 func (stmt *Stmt) Parse() os.Error {
@@ -202,8 +203,41 @@ func (stmt *Stmt) Describe() os.Error {
 	panic("not reached")
 }
 
-func (stmt *Stmt) Close() os.Error {
-	panic("todo")
+func (stmt *Stmt) Close() (err os.Error) {
+	defer func() {
+		stmt.err = err
+	}()
+
+	err = stmt.p.Close(proto.Statement, stmt.Name)
+	if err != nil {
+		return err
+	}
+
+	err = stmt.p.Sync()
+	if err != nil {
+		return err
+	}
+
+	var done bool
+	for {
+		m, err := stmt.p.Next()
+		if err != nil {
+			return err
+		}
+		if m.Err != nil {
+			return m.Err
+		}
+
+		if m.Type == '3' {
+			done = true
+		}
+
+		if done && m.Type == 'Z' {
+			return nil
+		}
+	}
+
+	panic("not reached")
 }
 
 func (stmt *Stmt) NumInput() int {
@@ -262,10 +296,20 @@ type Rows struct {
 	names []string
 	err os.Error
 	c int
+	closed bool
 }
 
 func (r *Rows) Close() os.Error {
-	return nil
+	r.closed = true
+
+	// Drain the remaining rows
+	for r.err != nil { r.err = r.Next(nil) }
+
+	if r.err == os.EOF {
+		return nil
+	}
+
+	return r.err
 }
 
 func (r *Rows) Complete() int {
@@ -279,6 +323,10 @@ func (r *Rows) Columns() []string {
 func (r *Rows) Next(dest []interface{}) (err os.Error) {
 	if r.err != nil {
 		return r.err
+	}
+
+	if r.closed {
+		return os.NewError("pq: cursor already closed")
 	}
 
 	defer func() {

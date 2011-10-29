@@ -68,6 +68,9 @@ func TestConnNotify(t *testing.T) {
 	err = rows.Next(nil)
 	assert.Equalf(t, os.EOF, err, "%v", err)
 
+	err = lstmt.Close()
+	assert.Equalf(t, nil, err, "%v", err)
+
 	// Notify
 	nstmt, err := cn.Prepare("NOTIFY test, 'foo'")
 	assert.Equalf(t, nil, err, "%v", err)
@@ -77,6 +80,9 @@ func TestConnNotify(t *testing.T) {
 
 	err = rows.Next(nil)
 	assert.Equalf(t, os.EOF, err, "%v", err)
+
+	err = nstmt.Close()
+	assert.Equalf(t, nil, err, "%v", err)
 
 	n := <-cn.Notifies
 	assert.NotEqual(t, 0, n.Pid)
