@@ -393,7 +393,10 @@ func (r *Rows) Next(dest []interface{}) (err os.Error) {
 }
 
 func (cn *Conn) Begin() (driver.Tx, os.Error) { panic("todo") }
-func (cn *Conn) Close() os.Error { panic("todo") }
+
+func (cn *Conn) Close() os.Error {
+	return cn.rwc.Close()
+}
 
 func notExpected(c byte) {
 	panic(fmt.Sprintf("pq: unexpected response from server (%c)", c))
