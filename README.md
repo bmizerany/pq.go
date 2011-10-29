@@ -50,5 +50,5 @@
 **To Know**
 
 When one or more LISTEN's are active, it is the responsiblity of the user to
-drain the `cn.Notifies` channel; Failing to do so causes reads and writes on
-the connection to block if there are pending notifications on the connection.
+drain the `cn.Notifies` channel; Failing to do so causes reads on the
+connection to block if there are pending notifications on the connection.
