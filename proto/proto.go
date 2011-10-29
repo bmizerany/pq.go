@@ -38,11 +38,11 @@ type Conn struct {
 	wc  io.ReadWriteCloser
 }
 
-func New(rwc io.ReadWriteCloser) *Conn {
+func New(rwc io.ReadWriteCloser, notifies chan<- *Notify) *Conn {
 	cn := &Conn{
 		b:   NewBuffer(nil),
 		wc:  rwc,
-		scr: scan(rwc),
+		scr: scan(rwc, notifies),
 	}
 
 	return cn

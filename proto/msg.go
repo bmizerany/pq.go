@@ -22,6 +22,8 @@ type Msg struct {
 	ColNames    []string
 	Tag         string
 	Params      []int
+	From        string
+	Payload     string
 }
 
 func (m *Msg) parse() os.Error {
@@ -68,6 +70,12 @@ func (m *Msg) parse() os.Error {
 			m.ReadInt32()
 			m.ReadInt16()
 		}
+	case 'n':
+		// ignore
+	case 'A':
+		m.Pid = int(m.ReadInt32())
+		m.From = m.ReadCString()
+		m.Payload = m.ReadCString()
 	}
 
 	if m.Len() != 0 {

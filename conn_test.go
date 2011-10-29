@@ -50,3 +50,36 @@ func TestConnPrepare(t *testing.T) {
 	err = rows.Next(dest)
 	assert.Equalf(t, os.EOF, err, "%v", err)
 }
+
+func TestConnNotify(t *testing.T) {
+	nc, err := net.Dial("tcp", "localhost:5432")
+	assert.Equalf(t, nil, err, "%v", err)
+
+	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")})
+	assert.Equalf(t, nil, err, "%v", err)
+
+	// Listen
+	lstmt, err := cn.Prepare("LISTEN test")
+	assert.Equalf(t, nil, err, "%v", err)
+
+	rows, err := lstmt.Query(nil)
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = rows.Next(nil)
+	assert.Equalf(t, os.EOF, err, "%v", err)
+
+	// Notify
+	nstmt, err := cn.Prepare("NOTIFY test, 'foo'")
+	assert.Equalf(t, nil, err, "%v", err)
+
+	rows, err = nstmt.Query(nil)
+	assert.Equalf(t, nil, err, "%v", err)
+
+	err = rows.Next(nil)
+	assert.Equalf(t, os.EOF, err, "%v", err)
+
+	n := <-cn.Notifies
+	assert.NotEqual(t, 0, n.Pid)
+	assert.Equal(t, "test", n.From)
+	assert.Equal(t, "foo", n.Payload)
+}

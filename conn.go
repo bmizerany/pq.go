@@ -47,6 +47,7 @@ type Conn struct {
 	Pid      int
 	Secret   int
 	Status   byte
+	Notifies <-chan *proto.Notify
 
 	rwc io.ReadWriteCloser
 	p   *proto.Conn
@@ -54,9 +55,12 @@ type Conn struct {
 }
 
 func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, os.Error) {
+	notifies := make(chan *proto.Notify, 5) // 5 should be enough to prevent simple blocking
+
 	cn := &Conn{
+		Notifies: notifies,
 		Settings: make(proto.Values),
-		p:        proto.New(rwc),
+		p:        proto.New(rwc, notifies),
 	}
 
 	err := cn.p.Startup(params)
@@ -184,6 +188,8 @@ func (stmt *Stmt) Describe() os.Error {
 		switch m.Type {
 		default:
 			notExpected(m.Type)
+		case 'n':
+			// no data
 		case 't':
 			stmt.params = m.Params
 		case 'T':

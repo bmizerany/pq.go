@@ -9,15 +9,22 @@ import (
 
 const sizeOfInt32 = int32(32 / 8)
 
+type Notify struct {
+	Pid int
+	From string
+	Payload string
+}
+
 type scanner struct {
 	r    io.Reader
 	msgs <-chan *Msg
+	notifies chan<- *Notify
 	err  os.Error
 }
 
-func scan(r io.Reader) *scanner {
+func scan(r io.Reader, notifies chan<- *Notify) *scanner {
 	msgs := make(chan *Msg)
-	s := &scanner{r: r, msgs: msgs}
+	s := &scanner{r: r, msgs: msgs, notifies: notifies}
 
 	go s.run(msgs)
 
@@ -48,6 +55,12 @@ func (s *scanner) run(msgs chan<- *Msg) {
 
 		m.Buffer = &Buffer{bytes.NewBuffer(b)}
 
-		msgs <- m
+		switch m.Type {
+		default:
+			msgs <- m
+		case 'A': // Notification
+			m.parse()
+			s.notifies <- &Notify{m.Pid, m.From, m.Payload}
+		}
 	}
 }
