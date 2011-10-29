@@ -152,13 +152,11 @@ func (stmt *Stmt) Parse() os.Error {
 		return err
 	}
 
+	var serr os.Error
 	for {
 		m, err := stmt.p.Next()
 		if err != nil {
 			return err
-		}
-		if m.Err != nil {
-			return m.Err
 		}
 
 		switch m.Type {
@@ -167,7 +165,9 @@ func (stmt *Stmt) Parse() os.Error {
 		case '1':
 			// ignore
 		case 'Z':
-			return nil
+			return serr
+		case 'E':
+			serr = m.Err
 		}
 	}
 
@@ -185,18 +185,18 @@ func (stmt *Stmt) Describe() os.Error {
 		return err
 	}
 
+	var serr os.Error
 	for {
 		m, err := stmt.p.Next()
 		if err != nil {
 			return err
 		}
-		if m.Err != nil {
-			return m.Err
-		}
 
 		switch m.Type {
 		default:
 			notExpected(m.Type)
+		case 'E':
+			serr = m.Err
 		case 'n':
 			// no data
 		case 't':
@@ -204,7 +204,7 @@ func (stmt *Stmt) Describe() os.Error {
 		case 'T':
 			stmt.names = m.ColNames
 		case 'Z':
-			return nil
+			return serr
 		}
 	}
 
