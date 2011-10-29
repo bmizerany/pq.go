@@ -1,8 +1,9 @@
-# pg.go - A pure Go Postgres driver
+# pg.go - A pure Go Postgres driver (works with exp/sql)
 
 ## Connecting
+		import "exp/sql"
 
-		cn, err := pq.Dial("localhost:5432", pq.Values{"user": "blake"}, nil)
+		cn, err := sql.Open("postgres", "postgres://blake:@locahost:5432")
 		if err != nil {
 			log.Print(err)
 		}
@@ -18,11 +19,6 @@
 		var length int
 		for rows.Next() {
 			err := rows.Scan(&length)
-			if rows.Error() != nil {
-				log.Print(rows.Error())
-				break
-			}
-
 			if err != nil {
 				log.Print(err)
 				break
@@ -31,6 +27,10 @@
 			log.Printf("length = %d", length)
 		}
 
+		if rows.Error() != nil {
+			log.Print(rows.Error())
+			break
+		}
 
 ## Notifications
 
