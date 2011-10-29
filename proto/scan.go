@@ -61,7 +61,7 @@ func (s *scanner) run(msgs chan<- *Msg) {
 			msgs <- m
 		case 'N':
 			m.parse()
-			log.Println("pq: NOTICE (%c) %s", m.Status, m.Message)
+			log.Printf("pq: NOTICE (%c) %s", m.Status, m.Message)
 		case 'A': // Notification
 			m.parse()
 			s.notifies <- &Notify{m.Pid, m.From, m.Payload}
