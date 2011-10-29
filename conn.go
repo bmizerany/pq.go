@@ -109,6 +109,39 @@ func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, os.Error) {
 	panic("not reached")
 }
 
+func (cn *Conn) Exec(query string, args []interface{}) (driver.Result, os.Error) {
+	if len(args) == 0 {
+		err := cn.p.SimpleQuery(query)
+		if err != nil {
+			return nil, err
+		}
+
+		var serr os.Error
+		for {
+			m, err := cn.p.Next()
+			if err != nil {
+				return nil, err
+			}
+
+			switch m.Type {
+			case 'E':
+				serr = m.Err
+			case 'Z':
+				return driver.RowsAffected(0), serr
+			}
+		}
+	} else {
+		stmt, err := cn.Prepare(query)
+		if err != nil {
+			return nil, err
+		}
+
+		return stmt.Exec(args)
+	}
+
+	panic("not reached")
+}
+
 func (cn *Conn) Prepare(query string) (driver.Stmt, os.Error) {
 	name := "" //TODO: support named queries
 
