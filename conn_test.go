@@ -60,11 +60,8 @@ func TestConnNotify(t *testing.T) {
 	lstmt, err := cn.Prepare("LISTEN test")
 	assert.Equalf(t, nil, err, "%v", err)
 
-	rows, err := lstmt.Query(nil)
+	_, err = lstmt.Exec(nil)
 	assert.Equalf(t, nil, err, "%v", err)
-
-	err = rows.Next(nil)
-	assert.Equalf(t, os.EOF, err, "%v", err)
 
 	err = lstmt.Close()
 	assert.Equalf(t, nil, err, "%v", err)
@@ -73,11 +70,8 @@ func TestConnNotify(t *testing.T) {
 	nstmt, err := cn.Prepare("NOTIFY test, 'foo'")
 	assert.Equalf(t, nil, err, "%v", err)
 
-	rows, err = nstmt.Query(nil)
+	_, err = nstmt.Exec(nil)
 	assert.Equalf(t, nil, err, "%v", err)
-
-	err = rows.Next(nil)
-	assert.Equalf(t, os.EOF, err, "%v", err)
 
 	err = nstmt.Close()
 	assert.Equalf(t, nil, err, "%v", err)

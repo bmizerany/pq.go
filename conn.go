@@ -241,7 +241,17 @@ func (stmt *Stmt) NumInput() int {
 }
 
 func (stmt *Stmt) Exec(args []interface{}) (driver.Result, os.Error) {
-	panic("todo")
+	// NOTE: should return []drive.Result, because a PS can have more
+	// than one statement and recv more than one tag.
+	rows, err := stmt.Query(args)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next(nil) != os.EOF {}
+
+	// TODO: use the tag given by CommandComplete
+	return driver.RowsAffected(0), nil
 }
 
 func (stmt *Stmt) Query(args []interface{}) (driver.Rows, os.Error) {
