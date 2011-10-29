@@ -34,11 +34,20 @@
 
 ## Notifications
 
+Notifications can't be accessed via the exp/sql package. You will need to use
+pq.OpenRaw to obtain a single connection for listenting.  NOTE: It is recommend
+to only use this connection for reading notifiactions and to use the exp/sql
+API for all other operations. This may change in the future.
+
 **Example**
+		ln, err := pq.OpenRaw("postgres://blake:@localhost:5432/mydb")
+		if err != nil {
+			panic(err)
+		}
 
 		// Concurrently read notifications to avoid blocking the connection (see To Know).
 		go func() {
-			for n := range cn.Notifies {
+			for n := range ln.Notifies {
 				log.Printf("notify: %q:%q", n.Channel, n.Payload)
 			}
 		}()
