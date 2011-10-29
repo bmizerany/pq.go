@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"url"
+	"path"
 )
 
 type Driver struct{}
@@ -36,6 +37,9 @@ func OpenRaw(uarel string) (*Conn, os.Error) {
 
 	params := make(proto.Values)
 	params.Set("user", user)
+	if u.Path != "" {
+		params.Set("database", path.Base(u.Path))
+	}
 
 	return New(nc, params)
 }
