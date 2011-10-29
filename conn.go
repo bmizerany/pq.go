@@ -1,12 +1,46 @@
 package pq
 
 import (
+	"net"
+	"exp/sql"
 	"exp/sql/driver"
 	"fmt"
 	"github.com/bmizerany/pq.go/proto"
 	"io"
 	"os"
+	"url"
 )
+
+type Driver struct{}
+
+func (dr *Driver) Open(name string) (driver.Conn, os.Error) {
+	u, err := url.Parse(name)
+	if err != nil {
+		return nil, err
+	}
+
+	nc, err := net.Dial("tcp", u.Host)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: use pass
+	user, _, err := url.UnescapeUserinfo(u.RawUserinfo)
+	if err != nil {
+		return nil, err
+	}
+
+	params := make(proto.Values)
+	params.Set("user", user)
+
+	return New(nc, params)
+}
+
+var pgDriver = &Driver{}
+
+func init() {
+	sql.Register("postgres", pgDriver)
+}
 
 type Conn struct {
 	Settings proto.Values
@@ -272,6 +306,9 @@ func (r *Rows) Next(dest []interface{}) (err os.Error) {
 
 	panic("not reached")
 }
+
+func (cn *Conn) Begin() (driver.Tx, os.Error) { panic("todo") }
+func (cn *Conn) Close() os.Error { panic("todo") }
 
 func notExpected(c byte) {
 	panic(fmt.Sprintf("pq: unexpected response from server (%c)", c))
