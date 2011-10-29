@@ -14,7 +14,11 @@ import (
 type Driver struct{}
 
 func (dr *Driver) Open(name string) (driver.Conn, os.Error) {
-	u, err := url.Parse(name)
+	return OpenRaw(name)
+}
+
+func OpenRaw(uarel string) (*Conn, os.Error) {
+	u, err := url.Parse(uarel)
 	if err != nil {
 		return nil, err
 	}
@@ -36,10 +40,10 @@ func (dr *Driver) Open(name string) (driver.Conn, os.Error) {
 	return New(nc, params)
 }
 
-var pgDriver = &Driver{}
+var defaultDriver = &Driver{}
 
 func init() {
-	sql.Register("postgres", pgDriver)
+	sql.Register("postgres", defaultDriver)
 }
 
 type Conn struct {
