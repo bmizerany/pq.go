@@ -40,6 +40,7 @@ to only use this connection for reading notifiactions and to use the exp/sql
 API for all other operations. This may change in the future.
 
 **Example**
+		
 		ln, err := pq.OpenRaw("postgres://blake:@localhost:5432/mydb")
 		if err != nil {
 			panic(err)
