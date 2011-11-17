@@ -10,6 +10,7 @@ import (
 	"os"
 	"url"
 	"path"
+	"strings"
 )
 
 type Driver struct{}
@@ -22,6 +23,10 @@ func OpenRaw(uarel string) (*Conn, os.Error) {
 	u, err := url.Parse(uarel)
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.Index(u.Host, ":") < 0 {
+		u.Host += ":5432"
 	}
 
 	nc, err := net.Dial("tcp", u.Host)
