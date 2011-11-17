@@ -12,6 +12,13 @@ import (
 	"path"
 )
 
+const (
+	authOk = iota
+	_
+	_
+	authPass
+)
+
 type Driver struct{}
 
 func (dr *Driver) Open(name string) (driver.Conn, os.Error) {
@@ -29,8 +36,7 @@ func OpenRaw(uarel string) (*Conn, os.Error) {
 		return nil, err
 	}
 
-	// TODO: use pass
-	user, _, err := url.UnescapeUserinfo(u.RawUserinfo)
+	user, pw, err := url.UnescapeUserinfo(u.RawUserinfo)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +47,7 @@ func OpenRaw(uarel string) (*Conn, os.Error) {
 		params.Set("database", path.Base(u.Path))
 	}
 
-	return New(nc, params)
+	return New(nc, params, pw)
 }
 
 var defaultDriver = &Driver{}
@@ -62,7 +68,7 @@ type Conn struct {
 	err os.Error
 }
 
-func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, os.Error) {
+func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, os.Error) {
 	notifies := make(chan *proto.Notify, 5) // 5 should be enough to prevent simple blocking
 
 	cn := &Conn{
@@ -91,10 +97,16 @@ func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, os.Error) {
 			notExpected(m.Type)
 		case 'R':
 			switch m.Auth {
-			default:
-				return nil, fmt.Errorf("pq: unknown authentication type (%d)", m.Status)
-			case 0:
+			case authOk:
 				continue
+			case authPass:
+				err := cn.p.Password(pw)
+				if err != nil {
+					rwc.Close()
+					return nil, err
+				}
+			default:
+				return nil, fmt.Errorf("pq: unknown authentication type (%d)", m.Auth)
 			}
 		case 'S':
 			cn.Settings.Set(m.Key, m.Val)

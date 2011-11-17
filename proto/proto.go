@@ -69,6 +69,11 @@ func (cn *Conn) Startup(params Values) os.Error {
 	return cn.flush(0)
 }
 
+func (cn *Conn) Password(pw string) os.Error {
+	cn.b.WriteCString(pw)
+	return cn.flush('p')
+}
+
 func (cn *Conn) SimpleQuery(query string) os.Error {
 	cn.b.WriteCString(query)
 	return cn.flush('Q')
