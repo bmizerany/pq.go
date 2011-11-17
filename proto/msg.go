@@ -5,6 +5,16 @@ import (
 	"os"
 )
 
+const (
+	AuthOk = iota
+	_
+	_
+	AuthPlain
+	_
+	AuthMd5
+)
+
+
 type Header struct {
 	Type   byte
 	Length int32
@@ -15,6 +25,7 @@ type Msg struct {
 	*Buffer
 	Err         os.Error
 	Auth        int
+	Salt        string
 	Status      byte
 	Key, Val    string
 	Pid, Secret int
@@ -37,6 +48,13 @@ func (m *Msg) parse() os.Error {
 		return nil // avoid the check at the end
 	case 'R':
 		m.Auth = int(m.ReadInt32())
+		switch m.Auth {
+		default:
+			return fmt.Errorf("pq: unknown authentication type (%d)", m.Auth)
+		case AuthOk, AuthPlain:
+		case AuthMd5:
+			m.Salt = string(m.Next(4))
+		}
 	case 'S':
 		m.Key = m.ReadCString()
 		m.Val = m.ReadCString()

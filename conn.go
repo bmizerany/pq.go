@@ -12,13 +12,6 @@ import (
 	"path"
 )
 
-const (
-	authOk = iota
-	_
-	_
-	authPass
-)
-
 type Driver struct{}
 
 func (dr *Driver) Open(name string) (driver.Conn, os.Error) {
@@ -62,6 +55,7 @@ type Conn struct {
 	Secret   int
 	Status   byte
 	Notifies <-chan *proto.Notify
+	User     string
 
 	rwc io.ReadWriteCloser
 	p   *proto.Conn
@@ -74,6 +68,7 @@ func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, os.Erro
 	cn := &Conn{
 		Notifies: notifies,
 		Settings: make(proto.Values),
+		User:     params.Get("user"),
 		p:        proto.New(rwc, notifies),
 	}
 
@@ -97,10 +92,16 @@ func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, os.Erro
 			notExpected(m.Type)
 		case 'R':
 			switch m.Auth {
-			case authOk:
+			case proto.AuthOk:
 				continue
-			case authPass:
+			case proto.AuthPlain:
 				err := cn.p.Password(pw)
+				if err != nil {
+					rwc.Close()
+					return nil, err
+				}
+			case proto.AuthMd5:
+				err := cn.p.PasswordMd5(m.Salt, cn.User, pw)
 				if err != nil {
 					rwc.Close()
 					return nil, err

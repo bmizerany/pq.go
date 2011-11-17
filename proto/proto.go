@@ -1,9 +1,11 @@
 package proto
 
 import (
+	"crypto/md5"
 	"encoding/binary"
 	"io"
 	"os"
+	"fmt"
 )
 
 type Type byte
@@ -71,6 +73,23 @@ func (cn *Conn) Startup(params Values) os.Error {
 
 func (cn *Conn) Password(pw string) os.Error {
 	cn.b.WriteCString(pw)
+	return cn.flush('p')
+}
+
+func md5s(s string) string {
+	h := md5.New()
+	h.Write([]byte(s))
+	return fmt.Sprintf("%x", h.Sum())
+}
+
+func concat(a, b string) string {
+	return a + b
+}
+
+func (cn *Conn) PasswordMd5(salt, user, pw string) os.Error {
+	// in SQL: concat('md5', md5(concat(md5(concat(password, username)), random-salt)))
+	sum := concat("md5", md5s(concat(md5s(concat(pw, user)), salt)))
+	cn.b.WriteCString(sum)
 	return cn.flush('p')
 }
 
