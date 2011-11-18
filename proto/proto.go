@@ -3,9 +3,8 @@ package proto
 import (
 	"crypto/md5"
 	"encoding/binary"
-	"io"
-	"os"
 	"fmt"
+	"io"
 )
 
 type Type byte
@@ -31,7 +30,7 @@ func (vs Values) Set(k, v string) {
 }
 
 func (vs Values) Del(k string) {
-	vs[k] = "", false
+	delete(vs, k)
 }
 
 type Conn struct {
@@ -50,7 +49,7 @@ func New(rwc io.ReadWriteCloser, notifies chan<- *Notify) *Conn {
 	return cn
 }
 
-func (cn *Conn) Next() (*Msg, os.Error) {
+func (cn *Conn) Next() (*Msg, error) {
 	m, ok := <-cn.scr.msgs
 	if !ok {
 		return nil, cn.scr.err
@@ -61,7 +60,7 @@ func (cn *Conn) Next() (*Msg, os.Error) {
 	return m, nil
 }
 
-func (cn *Conn) Startup(params Values) os.Error {
+func (cn *Conn) Startup(params Values) error {
 	cn.b.WriteInt32(ProtoVersion)
 	for k, v := range params {
 		cn.b.WriteCString(k)
@@ -71,7 +70,7 @@ func (cn *Conn) Startup(params Values) os.Error {
 	return cn.flush(0)
 }
 
-func (cn *Conn) Password(pw string) os.Error {
+func (cn *Conn) Password(pw string) error {
 	cn.b.WriteCString(pw)
 	return cn.flush('p')
 }
@@ -86,26 +85,26 @@ func concat(a, b string) string {
 	return a + b
 }
 
-func (cn *Conn) PasswordMd5(salt, user, pw string) os.Error {
+func (cn *Conn) PasswordMd5(salt, user, pw string) error {
 	// in SQL: concat('md5', md5(concat(md5(concat(password, username)), random-salt)))
 	sum := concat("md5", md5s(concat(md5s(concat(pw, user)), salt)))
 	cn.b.WriteCString(sum)
 	return cn.flush('p')
 }
 
-func (cn *Conn) SimpleQuery(query string) os.Error {
+func (cn *Conn) SimpleQuery(query string) error {
 	cn.b.WriteCString(query)
 	return cn.flush('Q')
 }
 
-func (cn *Conn) Parse(name, query string) os.Error {
+func (cn *Conn) Parse(name, query string) error {
 	cn.b.WriteCString(name)
 	cn.b.WriteCString(query)
 	cn.b.WriteInt16(0)
 	return cn.flush('P')
 }
 
-func (cn *Conn) Bind(portal, stmt string, args ...string) os.Error {
+func (cn *Conn) Bind(portal, stmt string, args ...string) error {
 	cn.b.WriteCString(portal)
 	cn.b.WriteCString(stmt)
 
@@ -128,19 +127,19 @@ func (cn *Conn) Bind(portal, stmt string, args ...string) os.Error {
 	return cn.flush('B')
 }
 
-func (cn *Conn) Execute(name string, rows int) os.Error {
+func (cn *Conn) Execute(name string, rows int) error {
 	cn.b.WriteCString(name)
 	cn.b.WriteInt32(int32(rows))
 	return cn.flush('E')
 }
 
-func (cn *Conn) Describe(t Type, name string) os.Error {
+func (cn *Conn) Describe(t Type, name string) error {
 	cn.b.WriteByte(byte(t))
 	cn.b.WriteCString(name)
 	return cn.flush('D')
 }
 
-func (cn *Conn) Sync() os.Error {
+func (cn *Conn) Sync() error {
 	err := cn.flush('S')
 	if err != nil {
 		return err
@@ -148,13 +147,13 @@ func (cn *Conn) Sync() os.Error {
 	return nil
 }
 
-func (cn *Conn) Close(t Type, name string) os.Error {
+func (cn *Conn) Close(t Type, name string) error {
 	cn.b.WriteByte(byte(t))
 	cn.b.WriteCString(name)
 	return cn.flush('C')
 }
 
-func (cn *Conn) flush(t byte) os.Error {
+func (cn *Conn) flush(t byte) error {
 	if t > 0 {
 		err := binary.Write(cn.wc, binary.BigEndian, t)
 		if err != nil {

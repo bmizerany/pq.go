@@ -4,23 +4,22 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
-	"os"
 	"log"
 )
 
 const sizeOfInt32 = int32(32 / 8)
 
 type Notify struct {
-	Pid int
-	From string
+	Pid     int
+	From    string
 	Payload string
 }
 
 type scanner struct {
-	r    io.Reader
-	msgs <-chan *Msg
+	r        io.Reader
+	msgs     <-chan *Msg
 	notifies chan<- *Notify
-	err  os.Error
+	err      error
 }
 
 func scan(r io.Reader, notifies chan<- *Notify) *scanner {
@@ -33,7 +32,7 @@ func scan(r io.Reader, notifies chan<- *Notify) *scanner {
 }
 
 func (s *scanner) run(msgs chan<- *Msg) {
-	var err os.Error
+	var err error
 	defer func() {
 		s.err = err
 		close(msgs)

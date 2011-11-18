@@ -2,9 +2,10 @@ package pq
 
 import (
 	"github.com/bmizerany/assert"
+	"io"
 	"net"
-	"testing"
 	"os"
+	"testing"
 )
 
 func TestConnPrepareErr(t *testing.T) {
@@ -39,14 +40,14 @@ func TestConnPrepare(t *testing.T) {
 	assert.Equal(t, []interface{}{"7"}, dest)
 
 	err = rows.Next(dest)
-	assert.Equalf(t, os.EOF, err, "%v", err)
+	assert.Equalf(t, io.EOF, err, "%v", err)
 
 	rows, err = stmt.Query([]interface{}{"testing", false})
 	assert.Equalf(t, nil, err, "%v", err)
 	assert.Equal(t, []string{"foo"}, rows.Columns())
 
 	err = rows.Next(dest)
-	assert.Equalf(t, os.EOF, err, "%v", err)
+	assert.Equalf(t, io.EOF, err, "%v", err)
 }
 
 func TestConnNotify(t *testing.T) {

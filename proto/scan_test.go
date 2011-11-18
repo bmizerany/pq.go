@@ -3,8 +3,8 @@ package proto
 import (
 	"bytes"
 	"github.com/bmizerany/assert"
+	"io"
 	"testing"
-	"os"
 )
 
 func TestScanSimple(t *testing.T) {
@@ -16,5 +16,5 @@ func TestScanSimple(t *testing.T) {
 
 	_, ok := <-s.msgs
 	assert.Equal(t, false, ok)
-	assert.Equal(t, os.EOF, s.err)
+	assert.Equal(t, io.EOF, s.err)
 }

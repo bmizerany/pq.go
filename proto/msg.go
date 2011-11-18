@@ -1,9 +1,6 @@
 package proto
 
-import (
-	"fmt"
-	"os"
-)
+import "fmt"
 
 const (
 	AuthOk = iota
@@ -14,7 +11,6 @@ const (
 	AuthMd5
 )
 
-
 type Header struct {
 	Type   byte
 	Length int32
@@ -23,7 +19,7 @@ type Header struct {
 type Msg struct {
 	Header
 	*Buffer
-	Err         os.Error
+	Err         error
 	Auth        int
 	Salt        string
 	Status      byte
@@ -38,7 +34,7 @@ type Msg struct {
 	Message     string
 }
 
-func (m *Msg) parse() os.Error {
+func (m *Msg) parse() error {
 	switch m.Type {
 	default:
 		return fmt.Errorf("pq: unknown server response (%c)", m.Type)

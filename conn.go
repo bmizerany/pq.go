@@ -1,25 +1,25 @@
 package pq
 
 import (
-	"net"
 	"exp/sql"
 	"exp/sql/driver"
 	"fmt"
 	"github.com/bmizerany/pq.go/proto"
 	"io"
-	"os"
-	"url"
+	"net"
+
+	"net/url"
 	"path"
 	"strings"
 )
 
 type Driver struct{}
 
-func (dr *Driver) Open(name string) (driver.Conn, os.Error) {
+func (dr *Driver) Open(name string) (driver.Conn, error) {
 	return OpenRaw(name)
 }
 
-func OpenRaw(uarel string) (*Conn, os.Error) {
+func OpenRaw(uarel string) (*Conn, error) {
 	u, err := url.Parse(uarel)
 	if err != nil {
 		return nil, err
@@ -64,10 +64,10 @@ type Conn struct {
 
 	rwc io.ReadWriteCloser
 	p   *proto.Conn
-	err os.Error
+	err error
 }
 
-func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, os.Error) {
+func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, error) {
 	notifies := make(chan *proto.Notify, 5) // 5 should be enough to prevent simple blocking
 
 	cn := &Conn{
@@ -127,14 +127,14 @@ func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, os.Erro
 	panic("not reached")
 }
 
-func (cn *Conn) Exec(query string, args []interface{}) (driver.Result, os.Error) {
+func (cn *Conn) Exec(query string, args []interface{}) (driver.Result, error) {
 	if len(args) == 0 {
 		err := cn.p.SimpleQuery(query)
 		if err != nil {
 			return nil, err
 		}
 
-		var serr os.Error
+		var serr error
 		for {
 			m, err := cn.p.Next()
 			if err != nil {
@@ -160,7 +160,7 @@ func (cn *Conn) Exec(query string, args []interface{}) (driver.Result, os.Error)
 	panic("not reached")
 }
 
-func (cn *Conn) Prepare(query string) (driver.Stmt, os.Error) {
+func (cn *Conn) Prepare(query string) (driver.Stmt, error) {
 	name := "" //TODO: support named queries
 
 	stmt := &Stmt{
@@ -189,10 +189,10 @@ type Stmt struct {
 	p      *proto.Conn
 	params []int
 	names  []string
-	err    os.Error
+	err    error
 }
 
-func (stmt *Stmt) Parse() os.Error {
+func (stmt *Stmt) Parse() error {
 	err := stmt.p.Parse(stmt.Name, stmt.query)
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func (stmt *Stmt) Parse() os.Error {
 		return err
 	}
 
-	var serr os.Error
+	var serr error
 	for {
 		m, err := stmt.p.Next()
 		if err != nil {
@@ -225,7 +225,7 @@ func (stmt *Stmt) Parse() os.Error {
 	panic("not reached")
 }
 
-func (stmt *Stmt) Describe() os.Error {
+func (stmt *Stmt) Describe() error {
 	err := stmt.p.Describe(proto.Statement, stmt.Name)
 	if err != nil {
 		return err
@@ -236,7 +236,7 @@ func (stmt *Stmt) Describe() os.Error {
 		return err
 	}
 
-	var serr os.Error
+	var serr error
 	for {
 		m, err := stmt.p.Next()
 		if err != nil {
@@ -262,7 +262,7 @@ func (stmt *Stmt) Describe() os.Error {
 	panic("not reached")
 }
 
-func (stmt *Stmt) Close() (err os.Error) {
+func (stmt *Stmt) Close() (err error) {
 	err = stmt.p.Close(proto.Statement, stmt.Name)
 	if err != nil {
 		return err
@@ -299,7 +299,7 @@ func (stmt *Stmt) NumInput() int {
 	return len(stmt.params)
 }
 
-func (stmt *Stmt) Exec(args []interface{}) (driver.Result, os.Error) {
+func (stmt *Stmt) Exec(args []interface{}) (driver.Result, error) {
 	// NOTE: should return []drive.Result, because a PS can have more
 	// than one statement and recv more than one tag.
 	rows, err := stmt.Query(args)
@@ -307,13 +307,14 @@ func (stmt *Stmt) Exec(args []interface{}) (driver.Result, os.Error) {
 		return nil, err
 	}
 
-	for rows.Next(nil) != os.EOF {}
+	for rows.Next(nil) != io.EOF {
+	}
 
 	// TODO: use the tag given by CommandComplete
 	return driver.RowsAffected(0), nil
 }
 
-func (stmt *Stmt) Query(args []interface{}) (driver.Rows, os.Error) {
+func (stmt *Stmt) Query(args []interface{}) (driver.Rows, error) {
 	// For now, we'll just say they're strings
 	sargs := encodeParams(args)
 
@@ -357,16 +358,18 @@ func (stmt *Stmt) Query(args []interface{}) (driver.Rows, os.Error) {
 }
 
 type Rows struct {
-	p *proto.Conn
+	p     *proto.Conn
 	names []string
-	c int
+	c     int
 }
 
-func (r *Rows) Close() (err os.Error) {
+func (r *Rows) Close() (err error) {
 	// Drain the remaining rows
-	for err == nil { err = r.Next(nil) }
+	for err == nil {
+		err = r.Next(nil)
+	}
 
-	if err == os.EOF {
+	if err == io.EOF {
 		return nil
 	}
 
@@ -381,7 +384,7 @@ func (r *Rows) Columns() []string {
 	return r.names
 }
 
-func (r *Rows) Next(dest []interface{}) (err os.Error) {
+func (r *Rows) Next(dest []interface{}) (err error) {
 	var m *proto.Msg
 	for {
 		m, err = r.p.Next()
@@ -403,16 +406,16 @@ func (r *Rows) Next(dest []interface{}) (err os.Error) {
 		case 'C':
 			r.c++
 		case 'Z':
-			return os.EOF
+			return io.EOF
 		}
 	}
 
 	panic("not reached")
 }
 
-func (cn *Conn) Begin() (driver.Tx, os.Error) { panic("todo") }
+func (cn *Conn) Begin() (driver.Tx, error) { panic("todo") }
 
-func (cn *Conn) Close() os.Error {
+func (cn *Conn) Close() error {
 	return cn.rwc.Close()
 }
 
