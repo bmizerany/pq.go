@@ -1,7 +1,10 @@
 # pg.go - A pure Go Postgres driver (works with exp/sql)
 
 ## Connecting
-		import "exp/sql"
+		import (
+			"exp/sql"
+			_ "github.com/bmizerany/pq.go"
+		)
 
 		cn, err := sql.Open("postgres", "postgres://blake:@locahost:5432")
 		if err != nil {
