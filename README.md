@@ -6,7 +6,7 @@
 			_ "github.com/bmizerany/pq.go"
 		)
 
-		cn, err := sql.Open("postgres", "postgres://blake:@locahost:5432")
+		db, err := sql.Open("postgres", "postgres://blake:@locahost:5432")
 		if err != nil {
 			log.Print(err)
 		}
@@ -14,7 +14,7 @@
 
 ## Unnamed Prepeared Query
 
-		rows, err := cn.Query("SELECT length($1) AS foo", "hello")
+		rows, err := db.Query("SELECT length($1) AS foo", "hello")
 		if err != nil {
 			log.Print(err)
 		}
@@ -56,12 +56,12 @@ API for all other operations. This may change in the future.
 			}
 		}()
 
-		cn.Exec("LISTEN user_added")
-		cn.Exec("INSERT INTO user (first, last) VALUES ($1, $2)", "Blake", "Mizerany")
-		cn.Exec("SELECT pg_notify(user_added, $1 || " " || $2)", "Blake", "Mizerany")
+		db.Exec("LISTEN user_added")
+		db.Exec("INSERT INTO user (first, last) VALUES ($1, $2)", "Blake", "Mizerany")
+		db.Exec("SELECT pg_notify(user_added, $1 || " " || $2)", "Blake", "Mizerany")
 
 **To Know**
 
 When one or more LISTEN's are active, it is the responsiblity of the user to
-drain the `cn.Notifies` channel; Failing to do so causes reads on the
+drain the `db.Notifies` channel; Failing to do so causes reads on the
 connection to block if there are pending notifications on the connection.
