@@ -1,4 +1,4 @@
-# pg.go - A pure Go Postgres driver (works with exp/sql)
+# pq.go - A pure Go Postgres driver (works with exp/sql)
 
 ## Connecting
 		import (
