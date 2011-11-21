@@ -263,7 +263,7 @@ func (stmt *Stmt) Describe() error {
 }
 
 func (stmt *Stmt) Close() (err error) {
-	err = stmt.p.Close(proto.Statement, stmt.Name)
+	err = stmt.p.ClosePP(proto.Statement, stmt.Name)
 	if err != nil {
 		return err
 	}
@@ -422,7 +422,7 @@ func (r *Rows) Next(dest []interface{}) (err error) {
 func (cn *Conn) Begin() (driver.Tx, error) { panic("todo") }
 
 func (cn *Conn) Close() error {
-	return cn.rwc.Close()
+	return cn.p.Close()
 }
 
 func notExpected(c byte) {

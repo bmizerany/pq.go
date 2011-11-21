@@ -49,6 +49,10 @@ func New(rwc io.ReadWriteCloser, notifies chan<- *Notify) *Conn {
 	return cn
 }
 
+func (cn *Conn) Close() error {
+	return cn.Close()
+}
+
 func (cn *Conn) Next() (*Msg, error) {
 	m, ok := <-cn.scr.msgs
 	if !ok {
@@ -147,7 +151,7 @@ func (cn *Conn) Sync() error {
 	return nil
 }
 
-func (cn *Conn) Close(t Type, name string) error {
+func (cn *Conn) ClosePP(t Type, name string) error {
 	cn.b.WriteByte(byte(t))
 	cn.b.WriteCString(name)
 	return cn.flush('C')
