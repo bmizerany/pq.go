@@ -50,7 +50,7 @@ func New(rwc io.ReadWriteCloser, notifies chan<- *Notify) *Conn {
 }
 
 func (cn *Conn) Close() error {
-	return cn.Close()
+	return cn.wc.Close()
 }
 
 func (cn *Conn) Next() (*Msg, error) {
