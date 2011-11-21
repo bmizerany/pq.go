@@ -361,6 +361,7 @@ type Rows struct {
 	p     *proto.Conn
 	names []string
 	c     int
+	done  bool
 }
 
 func (r *Rows) Close() (err error) {
@@ -385,6 +386,10 @@ func (r *Rows) Columns() []string {
 }
 
 func (r *Rows) Next(dest []interface{}) (err error) {
+	if r.done {
+		return io.EOF
+	}
+
 	var m *proto.Msg
 	for {
 		m, err = r.p.Next()
@@ -406,6 +411,7 @@ func (r *Rows) Next(dest []interface{}) (err error) {
 		case 'C':
 			r.c++
 		case 'Z':
+			r.done = true
 			return io.EOF
 		}
 	}
