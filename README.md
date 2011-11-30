@@ -44,7 +44,7 @@ API for all other operations. This may change in the future.
 
 **Example**
 
-		db, err := pq.Open("postgres", "postgres://blake:@localhost:5432/mydb")
+		db, err := sql.Open("postgres", "postgres://blake:@localhost:5432/mydb")
 		if err != nil {
 			panic(err)
 		}
