@@ -44,7 +44,12 @@ API for all other operations. This may change in the future.
 
 **Example**
 
-		ln, err := pq.OpenRaw("postgres://blake:@localhost:5432/mydb")
+		db, err := pq.Open("postgres", "postgres://blake:@localhost:5432/mydb")
+		if err != nil {
+			panic(err)
+		}
+
+		ln, err = pq.OpenRaw("postgres://blake:@localhost:5432/mydb")
 		if err != nil {
 			panic(err)
 		}
