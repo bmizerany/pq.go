@@ -56,7 +56,7 @@ API for all other operations. This may change in the future.
 			}
 		}()
 
-		db.Exec("LISTEN user_added")
+		ln.Exec("LISTEN user_added")
 		db.Exec("INSERT INTO user (first, last) VALUES ($1, $2)", "Blake", "Mizerany")
 		db.Exec("SELECT pg_notify(user_added, $1 || " " || $2)", "Blake", "Mizerany")
 
