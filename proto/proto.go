@@ -82,7 +82,7 @@ func (cn *Conn) Password(pw string) error {
 func md5s(s string) string {
 	h := md5.New()
 	h.Write([]byte(s))
-	return fmt.Sprintf("%x", h.Sum())
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 func concat(a, b string) string {
