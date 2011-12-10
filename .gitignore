@@ -1,7 +1,7 @@
-_go_.6
+_go_.[68]
 *.out
-_gotest_.6
+_gotest_.[68]
 *.a
-*.6
+*.[68]
 _testmain.go
 .DS_Store
