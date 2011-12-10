@@ -405,7 +405,11 @@ func (r *Rows) Next(dest []interface{}) (err error) {
 			notExpected(m.Type)
 		case 'D':
 			for i := 0; i < len(dest); i++ {
-				dest[i] = string(m.Cols[i])
+				if m.Cols[i] == nil {
+					dest[i] = nil
+				} else {
+					dest[i] = string(m.Cols[i])
+				}
 			}
 			return nil
 		case 'C':

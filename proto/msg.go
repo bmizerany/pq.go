@@ -64,8 +64,12 @@ func (m *Msg) parse() error {
 	case 'D':
 		m.Cols = make([][]byte, int(m.ReadInt16()))
 		for i := 0; i < len(m.Cols); i++ {
-			m.Cols[i] = make([]byte, int(m.ReadInt32()))
-			m.Read(m.Cols[i])
+			if n := int(m.ReadInt32()); n >= 0 {
+				m.Cols[i] = make([]byte, n)
+				m.Read(m.Cols[i])
+			} else {
+				m.Cols[i] = nil
+			}
 		}
 	case 'C':
 		m.Tag = m.ReadCString()
