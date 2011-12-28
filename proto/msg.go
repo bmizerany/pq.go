@@ -1,6 +1,9 @@
 package proto
 
-import "fmt"
+import (
+	"fmt"
+	"bytes"
+)
 
 const (
 	AuthOk = iota
@@ -11,6 +14,20 @@ const (
 	AuthMd5
 )
 
+const  (
+	ErrorFieldSeverity = 'S'
+	ErrorFieldCode = 'C'
+	ErrorFieldMessage = 'M'
+	ErrorFieldDetail = 'D'
+	ErrorFieldHint = 'H'
+	ErrorFieldPosition = 'P'
+	ErrorFieldInternalPosition = 'p'
+	ErrorFieldWhere = 'W'
+	ErrorFieldFile = 'F'
+	ErrorFieldLine = 'L'
+	ErrorFieldRoutine = 'R'
+)
+
 type Header struct {
 	Type   byte
 	Length int32
@@ -19,7 +36,7 @@ type Header struct {
 type Msg struct {
 	Header
 	*Buffer
-	Err         error
+	Err         *Error
 	Auth        int
 	Salt        string
 	Status      byte
@@ -34,14 +51,27 @@ type Msg struct {
 	Message     string
 }
 
+type Error struct {
+	Fields map[byte]string
+}
+
+func (err *Error) Error() string {
+
+	b := bytes.NewBufferString("pq: ")
+
+	for fieldName, value := range err.Fields {
+		fmt.Fprintf(b, "%s:%s,", readableFieldNames[fieldName], value)
+	}
+
+	return b.String()
+}
+
 func (m *Msg) parse() error {
 	switch m.Type {
 	default:
 		return fmt.Errorf("pq: unknown server response (%c)", m.Type)
 	case 'E':
-		m.Status = m.ReadByte()
-		m.Err = fmt.Errorf("pq: (%c) %s", m.Status, m.String())
-		return nil // avoid the check at the end
+		return m.ParseError()
 	case 'R':
 		m.Auth = int(m.ReadInt32())
 		switch m.Auth {
@@ -109,4 +139,37 @@ func (m *Msg) parse() error {
 	}
 
 	return nil
+}
+
+func (m *Msg) ParseError() error {
+	fields := make(map[byte]string)
+
+	var err error
+	var status byte
+
+	for status, err = m.Buffer.Buffer.ReadByte(); status != 0 && err == nil; status, err = m.Buffer.Buffer.ReadByte() {
+		message := m.ReadCString()
+		fields[status] = message
+	}
+
+	if err != nil {
+		return err
+	}
+
+	m.Err = &Error{fields}
+
+	return nil
+}
+var readableFieldNames = map[byte]string{
+	ErrorFieldSeverity: "Severity",
+	ErrorFieldCode: "Code",
+	ErrorFieldMessage: "Message",
+	ErrorFieldDetail: "Detail",
+	ErrorFieldHint: "Hint",
+	ErrorFieldPosition: "Position",
+	ErrorFieldInternalPosition: "InternalPosition",
+	ErrorFieldWhere: "Where",
+	ErrorFieldFile: "File",
+	ErrorFieldLine: "Line",
+	ErrorFieldRoutine: "Routine",
 }
