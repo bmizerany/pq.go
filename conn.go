@@ -307,7 +307,11 @@ func (stmt *Stmt) Exec(args []interface{}) (driver.Result, error) {
 		return nil, err
 	}
 
-	for rows.Next(nil) != io.EOF {
+	for err = rows.Next(nil); err == nil; err = rows.Next(nil) {
+	}
+
+	if err != io.EOF {
+		return nil, err
 	}
 
 	// TODO: use the tag given by CommandComplete
