@@ -311,6 +311,10 @@ func (stmt *Stmt) Exec(args []interface{}) (driver.Result, error) {
 	}
 
 	if err != io.EOF {
+		// We got an error, now we need to read the rest of the messages
+		for rows.Next(nil) != io.EOF {
+		}
+
 		return nil, err
 	}
 
