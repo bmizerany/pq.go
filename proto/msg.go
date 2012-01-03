@@ -1,8 +1,8 @@
 package proto
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
 )
 
 const (
@@ -14,18 +14,18 @@ const (
 	AuthMd5
 )
 
-const  (
-	ErrorFieldSeverity = 'S'
-	ErrorFieldCode = 'C'
-	ErrorFieldMessage = 'M'
-	ErrorFieldDetail = 'D'
-	ErrorFieldHint = 'H'
-	ErrorFieldPosition = 'P'
+const (
+	ErrorFieldSeverity         = 'S'
+	ErrorFieldCode             = 'C'
+	ErrorFieldMessage          = 'M'
+	ErrorFieldDetail           = 'D'
+	ErrorFieldHint             = 'H'
+	ErrorFieldPosition         = 'P'
 	ErrorFieldInternalPosition = 'p'
-	ErrorFieldWhere = 'W'
-	ErrorFieldFile = 'F'
-	ErrorFieldLine = 'L'
-	ErrorFieldRoutine = 'R'
+	ErrorFieldWhere            = 'W'
+	ErrorFieldFile             = 'F'
+	ErrorFieldLine             = 'L'
+	ErrorFieldRoutine          = 'R'
 )
 
 type Header struct {
@@ -160,16 +160,17 @@ func (m *Msg) ParseError() error {
 
 	return nil
 }
+
 var readableFieldNames = map[byte]string{
-	ErrorFieldSeverity: "Severity",
-	ErrorFieldCode: "Code",
-	ErrorFieldMessage: "Message",
-	ErrorFieldDetail: "Detail",
-	ErrorFieldHint: "Hint",
-	ErrorFieldPosition: "Position",
+	ErrorFieldSeverity:         "Severity",
+	ErrorFieldCode:             "Code",
+	ErrorFieldMessage:          "Message",
+	ErrorFieldDetail:           "Detail",
+	ErrorFieldHint:             "Hint",
+	ErrorFieldPosition:         "Position",
 	ErrorFieldInternalPosition: "InternalPosition",
-	ErrorFieldWhere: "Where",
-	ErrorFieldFile: "File",
-	ErrorFieldLine: "Line",
-	ErrorFieldRoutine: "Routine",
+	ErrorFieldWhere:            "Where",
+	ErrorFieldFile:             "File",
+	ErrorFieldLine:             "Line",
+	ErrorFieldRoutine:          "Routine",
 }
