@@ -1,8 +1,8 @@
 package proto
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -15,18 +15,32 @@ const (
 )
 
 const (
-	ErrorFieldSeverity         = 'S'
-	ErrorFieldCode             = 'C'
-	ErrorFieldMessage          = 'M'
-	ErrorFieldDetail           = 'D'
-	ErrorFieldHint             = 'H'
-	ErrorFieldPosition         = 'P'
-	ErrorFieldInternalPosition = 'p'
-	ErrorFieldWhere            = 'W'
-	ErrorFieldFile             = 'F'
-	ErrorFieldLine             = 'L'
-	ErrorFieldRoutine          = 'R'
+	ErrorTypeSeverity         = 'S'
+	ErrorTypeCode             = 'C'
+	ErrorTypeMessage          = 'M'
+	ErrorTypeDetail           = 'D'
+	ErrorTypeHint             = 'H'
+	ErrorTypePosition         = 'P'
+	ErrorTypeInternalPosition = 'p'
+	ErrorTypeWhere            = 'W'
+	ErrorTypeFile             = 'F'
+	ErrorTypeLine             = 'L'
+	ErrorTypeRoutine          = 'R'
 )
+
+var errorTypeName = map[byte]string{
+	ErrorTypeSeverity:         "Severity",
+	ErrorTypeCode:             "Code",
+	ErrorTypeMessage:          "Message",
+	ErrorTypeDetail:           "Detail",
+	ErrorTypeHint:             "Hint",
+	ErrorTypePosition:         "Position",
+	ErrorTypeInternalPosition: "InternalPosition",
+	ErrorTypeWhere:            "Where",
+	ErrorTypeFile:             "File",
+	ErrorTypeLine:             "Line",
+	ErrorTypeRoutine:          "Routine",
+}
 
 type Header struct {
 	Type   byte
@@ -56,14 +70,14 @@ type Error struct {
 }
 
 func (err *Error) Error() string {
-
-	b := bytes.NewBufferString("pq: ")
-
-	for fieldName, value := range err.Fields {
-		fmt.Fprintf(b, "%s:%s,", readableFieldNames[fieldName], value)
+	a := make([]string, len(err.Fields))
+	var i int
+	for t, v := range err.Fields {
+		a[i] = fmt.Sprintf("%s: (%s)", errorTypeName[t], v)
+		i++
 	}
 
-	return b.String()
+	return strings.Join(a, " - ")
 }
 
 func (m *Msg) parse() error {
@@ -159,18 +173,4 @@ func (m *Msg) ParseError() error {
 	m.Err = &Error{fields}
 
 	return nil
-}
-
-var readableFieldNames = map[byte]string{
-	ErrorFieldSeverity:         "Severity",
-	ErrorFieldCode:             "Code",
-	ErrorFieldMessage:          "Message",
-	ErrorFieldDetail:           "Detail",
-	ErrorFieldHint:             "Hint",
-	ErrorFieldPosition:         "Position",
-	ErrorFieldInternalPosition: "InternalPosition",
-	ErrorFieldWhere:            "Where",
-	ErrorFieldFile:             "File",
-	ErrorFieldLine:             "Line",
-	ErrorFieldRoutine:          "Routine",
 }
