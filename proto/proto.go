@@ -29,8 +29,10 @@ func (vs Values) Set(k, v string) {
 	vs[k] = v
 }
 
-func (vs Values) Del(k string) {
+func (vs Values) Del(k string) (v string) {
+	v = vs.Get(k)
 	delete(vs, k)
+	return
 }
 
 type Conn struct {

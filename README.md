@@ -6,7 +6,7 @@
 			_ "github.com/bmizerany/pq.go"
 		)
 
-		db, err := sql.Open("postgres", "postgres://blake:@locahost:5432")
+		db, err := sql.Open("postgres", "user=blake host=localhost port=5432 database=mydb")
 		if err != nil {
 			log.Print(err)
 		}
@@ -44,7 +44,7 @@ API for all other operations. This may change in the future.
 
 **Example**
 
-		db, err := sql.Open("postgres", "postgres://blake:@localhost:5432/mydb")
+		db, err := sql.Open("postgres", "user=blake host=localhost port=5432 databse=mydb")
 		if err != nil {
 			panic(err)
 		}
@@ -64,6 +64,10 @@ API for all other operations. This may change in the future.
 		ln.Exec("LISTEN user_added")
 		db.Exec("INSERT INTO user (first, last) VALUES ($1, $2)", "Blake", "Mizerany")
 		db.Exec("SELECT pg_notify(user_added, $1 || " " || $2)", "Blake", "Mizerany")
+
+## Connection strings
+
+Please refer to [http://www.postgresql.org/docs/8.1/static/libpq.html]() for detailed information on building connection strings.
 
 **To Know**
 

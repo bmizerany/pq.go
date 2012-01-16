@@ -8,8 +8,6 @@ import (
 	"io"
 	"net"
 
-	"net/url"
-	"path"
 	"strings"
 )
 
@@ -19,33 +17,23 @@ func (dr *Driver) Open(name string) (driver.Conn, error) {
 	return OpenRaw(name)
 }
 
-func OpenRaw(uarel string) (*Conn, error) {
-	u, err := url.Parse(uarel)
-	if err != nil {
-		return nil, err
-	}
-
-	if strings.Index(u.Host, ":") < 0 {
-		u.Host += ":5432"
-	}
-
-	nc, err := net.Dial("tcp", u.Host)
-	if err != nil {
-		return nil, err
-	}
-
-	user, pw, err := url.UnescapeUserinfo(u.RawUserinfo)
-	if err != nil {
-		return nil, err
-	}
-
+func OpenRaw(opts string) (*Conn, error) {
 	params := make(proto.Values)
-	params.Set("user", user)
-	if u.Path != "" {
-		params.Set("database", path.Base(u.Path))
+	for i, opt := range strings.Split(opts, " ") {
+		kv := strings.Split(opt, "=")
+		if len(kv) < 2 {
+			return nil, fmt.Errorf("pq: option %d is not valid", i)
+		}
+		params.Set(kv[0], kv[1])
 	}
 
-	return New(nc, params, pw)
+	addr := params.Del("host") + ":" + params.Del("port")
+	nc, err := net.Dial("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return New(nc, params)
 }
 
 var defaultDriver = &Driver{}
@@ -67,7 +55,7 @@ type Conn struct {
 	err error
 }
 
-func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, error) {
+func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, error) {
 	notifies := make(chan *proto.Notify, 5) // 5 should be enough to prevent simple blocking
 
 	cn := &Conn{
@@ -76,6 +64,8 @@ func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, error) 
 		User:     params.Get("user"),
 		p:        proto.New(rwc, notifies),
 	}
+
+	pw := params.Del("password")
 
 	err := cn.p.Startup(params)
 	if err != nil {

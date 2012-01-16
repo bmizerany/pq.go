@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-var cs = fmt.Sprintf("postgres://%s:@localhost:5432", os.Getenv("USER"))
+var cs = fmt.Sprintf("user=%s host=localhost port=5432", os.Getenv("USER"))
 
 func TestSqlSimple(t *testing.T) {
 	cn, err := sql.Open("postgres", cs)
