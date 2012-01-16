@@ -7,7 +7,6 @@ import (
 	"github.com/bmizerany/pq.go/proto"
 	"io"
 	"net"
-
 	"strings"
 )
 
@@ -438,7 +437,6 @@ func notExpected(c byte) {
 	panic(fmt.Sprintf("pq: unexpected response from server (%c)", c))
 }
 
-
 type Tx struct {
 	cn *Conn
 }
@@ -452,4 +450,3 @@ func (t *Tx) Rollback() error {
 	_, err := t.cn.Exec("ROLLBACK", nil)
 	return err
 }
-
