@@ -71,7 +71,7 @@ func New(rwc net.Conn, params proto.Values) (*Conn, error) {
 	default:
 		return nil, fmt.Errorf("pq: unknown sslmode '%s'. must be 'disable' or 'require'", ssl)
 	case "disable":
-	case "require":
+	case "require", "verify-full":
 		err := cn.p.SSLRequest()
 		if err != nil {
 			return nil, err
@@ -84,7 +84,7 @@ func New(rwc net.Conn, params proto.Values) (*Conn, error) {
 
 		switch m.Type {
 		case 'S':
-			cn.p.WrapTLS()
+			cn.p.WrapTLS(ssl == "verify-full")
 		case 'N':
 			panic("todo: don't panic")
 		}

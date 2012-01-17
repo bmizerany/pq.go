@@ -188,6 +188,6 @@ func (cn *Conn) flush(t byte) error {
 	return err
 }
 
-func (cn *Conn) WrapTLS() {
-	cn.wc = tls.Client(cn.wc, nil)
+func (cn *Conn) WrapTLS(verify bool) {
+	cn.wc = tls.Client(cn.wc, &tls.Config{InsecureSkipVerify: !verify})
 }
