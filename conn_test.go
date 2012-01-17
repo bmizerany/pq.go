@@ -12,7 +12,7 @@ func TestConnPrepareErr(t *testing.T) {
 	nc, err := net.Dial("tcp", "localhost:5432")
 	assert.Equalf(t, nil, err, "%v", err)
 
-	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")})
+	cn, err := New(nc, map[string]string{"user": os.Getenv("USER"), "sslmode": "disable"})
 	assert.Equalf(t, nil, err, "%v", err)
 
 	_, err = cn.Prepare("SELECT length($1) AS ZOMG! AN ERR")
@@ -23,7 +23,7 @@ func TestConnPrepare(t *testing.T) {
 	nc, err := net.Dial("tcp", "localhost:5432")
 	assert.Equalf(t, nil, err, "%v", err)
 
-	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")})
+	cn, err := New(nc, map[string]string{"user": os.Getenv("USER"), "sslmode": "disable"})
 	assert.Equalf(t, nil, err, "%v", err)
 
 	stmt, err := cn.Prepare("SELECT length($1) AS foo WHERE true = $2")
@@ -54,7 +54,7 @@ func TestConnNotify(t *testing.T) {
 	nc, err := net.Dial("tcp", "localhost:5432")
 	assert.Equalf(t, nil, err, "%v", err)
 
-	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")})
+	cn, err := New(nc, map[string]string{"user": os.Getenv("USER"), "sslmode": "disable"})
 	assert.Equalf(t, nil, err, "%v", err)
 
 	// Listen
@@ -84,7 +84,7 @@ func TestConnNotify(t *testing.T) {
 }
 
 func TestAuthCleartextPassword(t *testing.T) {
-	c, err := OpenRaw("user=gopqtest password=foo host=localhost port=5432")
+	c, err := OpenRaw("sslmode=disable user=gopqtest password=foo host=localhost port=5432")
 	assert.Equalf(t, nil, err, "%v", err)
 
 	s, err := c.Prepare("SELECT 1")
@@ -95,13 +95,13 @@ func TestAuthCleartextPassword(t *testing.T) {
 }
 
 func TestAuthMissingCleartextPassword(t *testing.T) {
-	c, err := OpenRaw("host=localhost port=5432 user=gopqtest")
+	c, err := OpenRaw("sslmode=disable host=localhost port=5432 user=gopqtest")
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, (*Conn)(nil), c)
 }
 
 func TestAuthWrongCleartextPassword(t *testing.T) {
-	c, err := OpenRaw("user=gopqtest password=bar host=localhost port=5432")
+	c, err := OpenRaw("sslmode=disable user=gopqtest password=bar host=localhost port=5432")
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, (*Conn)(nil), c)
 }

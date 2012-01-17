@@ -49,12 +49,12 @@ type Conn struct {
 	Notifies <-chan *proto.Notify
 	User     string
 
-	rwc io.ReadWriteCloser
+	rwc net.Conn
 	p   *proto.Conn
 	err error
 }
 
-func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, error) {
+func New(rwc net.Conn, params proto.Values) (*Conn, error) {
 	notifies := make(chan *proto.Notify, 5) // 5 should be enough to prevent simple blocking
 
 	cn := &Conn{
@@ -65,6 +65,7 @@ func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, error) {
 	}
 
 	pw := params.Del("password")
+	ssl := params.Del("sslmode")
 
 	switch ssl {
 	default:
@@ -83,9 +84,9 @@ func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, error) {
 
 		switch m.Type {
 		case 'S':
-			cn.wrapTLS()
+			cn.p.WrapTLS()
 		case 'N':
-			return nil, no!
+			panic("todo: don't panic")
 		}
 	}
 

@@ -66,6 +66,12 @@ func (cn *Conn) Next() (*Msg, error) {
 	return m, nil
 }
 
+func (cn *Conn) SSLRequest() error {
+	cn.b.WriteInt32(8)
+	cn.b.WriteInt32(80877103)
+	return cn.flush('F')
+}
+
 func (cn *Conn) Startup(params Values) error {
 	cn.b.WriteInt32(ProtoVersion)
 	for k, v := range params {
@@ -179,4 +185,8 @@ func (cn *Conn) flush(t byte) error {
 	}
 
 	return err
+}
+
+func (cn *Conn) WrapTLS() error {
+	panic("todo")
 }
