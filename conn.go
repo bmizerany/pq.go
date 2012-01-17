@@ -66,6 +66,29 @@ func New(rwc io.ReadWriteCloser, params proto.Values) (*Conn, error) {
 
 	pw := params.Del("password")
 
+	switch ssl {
+	default:
+		return nil, fmt.Errorf("pq: unknown sslmode '%s'. must be 'disable' or 'require'", ssl)
+	case "disable":
+	case "require":
+		err := cn.p.SSLRequest()
+		if err != nil {
+			return nil, err
+		}
+
+		m, err := cn.p.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		switch m.Type {
+		case 'S':
+			cn.wrapTLS()
+		case 'N':
+			return nil, no!
+		}
+	}
+
 	err := cn.p.Startup(params)
 	if err != nil {
 		return nil, err
