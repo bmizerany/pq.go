@@ -2,9 +2,10 @@ package proto
 
 import (
 	"crypto/md5"
+	"crypto/tls"
 	"encoding/binary"
 	"fmt"
-	"io"
+	"net"
 )
 
 type Type byte
@@ -38,10 +39,10 @@ func (vs Values) Del(k string) (v string) {
 type Conn struct {
 	b   *Buffer
 	scr *scanner
-	wc  io.ReadWriteCloser
+	wc  net.Conn
 }
 
-func New(rwc io.ReadWriteCloser, notifies chan<- *Notify) *Conn {
+func New(rwc net.Conn, notifies chan<- *Notify) *Conn {
 	cn := &Conn{
 		b:   NewBuffer(nil),
 		wc:  rwc,
@@ -187,6 +188,6 @@ func (cn *Conn) flush(t byte) error {
 	return err
 }
 
-func (cn *Conn) WrapTLS() error {
-	panic("todo")
+func (cn *Conn) WrapTLS() {
+	cn.wc = tls.Client(cn.wc, nil)
 }
