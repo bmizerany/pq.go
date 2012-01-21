@@ -1,13 +1,12 @@
 package pq
 
 import (
-	"exp/sql"
-	"exp/sql/driver"
+	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"github.com/bmizerany/pq.go/proto"
 	"io"
 	"net"
-
 	"net/url"
 	"path"
 	"strings"
@@ -34,17 +33,13 @@ func OpenRaw(uarel string) (*Conn, error) {
 		return nil, err
 	}
 
-	user, pw, err := url.UnescapeUserinfo(u.RawUserinfo)
-	if err != nil {
-		return nil, err
-	}
-
 	params := make(proto.Values)
-	params.Set("user", user)
+	params.Set("user", u.User.Username())
 	if u.Path != "" {
 		params.Set("database", path.Base(u.Path))
 	}
 
+	pw, _ := u.User.Password()
 	return New(nc, params, pw)
 }
 
@@ -448,7 +443,6 @@ func notExpected(c byte) {
 	panic(fmt.Sprintf("pq: unexpected response from server (%c)", c))
 }
 
-
 type Tx struct {
 	cn *Conn
 }
@@ -462,4 +456,3 @@ func (t *Tx) Rollback() error {
 	_, err := t.cn.Exec("ROLLBACK", nil)
 	return err
 }
-
