@@ -1,7 +1,7 @@
 package pq
 
 import (
-	"exp/sql"
+	"database/sql"
 	"fmt"
 	"github.com/bmizerany/assert"
 	"os"
