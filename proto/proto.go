@@ -108,19 +108,28 @@ func (cn *Conn) Parse(name, query string) error {
 	return cn.flush('P')
 }
 
-func (cn *Conn) Bind(portal, stmt string, args ...string) error {
+func (cn *Conn) Bind(portal, stmt string, args ...interface{}) error {
 	cn.b.WriteCString(portal)
 	cn.b.WriteCString(stmt)
 
 	// TODO: Use format codes; maybe?
 	//       some thought needs to be put into the design of this.
 	//       See (Bind) http://developer.postgresql.org/pgdocs/postgres/protocol-message-formats.html
-	cn.b.WriteInt16(0)
+	cn.b.WriteInt16(int16(len(args)))
+	for _, arg := range args {
+		switch arg.(type) {
+		case []byte:
+			cn.b.WriteInt16(1)
+		default:
+			cn.b.WriteInt16(0)
+		}
+	}
 
 	cn.b.WriteInt16(int16(len(args)))
 	for _, arg := range args {
-		cn.b.WriteInt32(int32(len(arg)))
-		cn.b.WriteString(arg)
+		l, v := encodeParam(arg)
+		cn.b.WriteInt32(l)
+		cn.b.WriteString(v)
 	}
 
 	// TODO: Use result format codes; maybe?

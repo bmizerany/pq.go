@@ -319,9 +319,7 @@ func (stmt *Stmt) Exec(args []interface{}) (driver.Result, error) {
 
 func (stmt *Stmt) Query(args []interface{}) (driver.Rows, error) {
 	// For now, we'll just say they're strings
-	sargs := encodeParams(args)
-
-	err := stmt.p.Bind(stmt.Name, stmt.Name, sargs...)
+	err := stmt.p.Bind(stmt.Name, stmt.Name, args...)
 	if err != nil {
 		return nil, err
 	}

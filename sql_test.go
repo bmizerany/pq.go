@@ -26,3 +26,27 @@ func TestSqlSimple(t *testing.T) {
 
 	assert.Equal(t, 7, length)
 }
+
+func TestBinary(t *testing.T) {
+	cn, err := sql.Open("postgres", cs)
+	_, err = cn.Exec("DROP TABLE foo")
+	if err != nil {
+		t.Log(err)
+	}
+
+	_, err = cn.Exec("CREATE TABLE foo (b bytea)")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = cn.Exec("INSERT INTO foo (b) VALUES ($1)", []byte{0, 1, 2, 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var b []byte
+	err = cn.QueryRow("SELECT b FROM foo LIMIT 1").Scan(&b)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
