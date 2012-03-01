@@ -400,10 +400,15 @@ func parseConnString(cs string) (Values, error) {
 	return o, nil
 }
 
-func ParseConnUrl(u *url.URL) (string, error) {
+func ParseURL(us string) (string, error) {
+	u, err := url.Parse(us)
+	if err != nil {
+		return "", err
+	}
 	if u.Scheme != "postgres" {
 		return "", fmt.Errorf("invalid connection protocol: %s", u.Scheme)
 	}
+
 	result := make([]string, 0, 5)
 	host := ""
 	switch i := strings.Index(u.Host, ":"); i {

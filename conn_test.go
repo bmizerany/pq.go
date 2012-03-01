@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"testing"
 )
@@ -53,38 +52,32 @@ func TestSimple(t *testing.T) {
 	}
 }
 
-func TestSimpleParseConnUrl(t *testing.T) {
-	url, _ := url.Parse("postgres://hostname.remote")
-
+func TestSimpleParseURL(t *testing.T) {
 	expected := "host=hostname.remote"
-	str, err := ParseConnUrl(url)
+	str, err := ParseURL("postgres://hostname.remote")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if str != expected {
-		t.Fatalf("unexpected result from ParseConnUrl:\n+ %v\n- %v", str, expected)
+		t.Fatalf("unexpected result from ParseURL:\n+ %v\n- %v", str, expected)
 	}
 }
 
-func TestFullParseConnUrl(t *testing.T) {
-	url, _ := url.Parse("postgres://username:secret@hostname.remote:1234/database")
-
+func TestFullParseURL(t *testing.T) {
 	expected := "port=1234 host=hostname.remote user=username password=secret dbname=database"
-	str, err := ParseConnUrl(url)
+	str, err := ParseURL("postgres://username:secret@hostname.remote:1234/database")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if str != expected {
-		t.Fatalf("unexpected result from ParseConnUrl:\n+ %s\n- %s", str, expected)
+		t.Fatalf("unexpected result from ParseURL:\n+ %s\n- %s", str, expected)
 	}
 }
 
-func TestInvalidProtocolParseConnUrl(t *testing.T) {
-	url, _ := url.Parse("http://hostname.remote")
-
-	_, err := ParseConnUrl(url)
+func TestInvalidProtocolParseURL(t *testing.T) {
+	_, err := ParseURL("http://hostname.remote")
 	switch err {
 	case nil:
 		t.Fatal("Expected an error from parsing invalid protocol")
