@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"crypto/md5"
 	"net"
 	"net/url"
 	"strings"
@@ -201,7 +202,7 @@ func (cn *Conn) startup(o Values) {
 		cn.recvMsg()
 		switch cn.T {
 		case 'R':
-			cn.auth()
+			cn.auth(o)
 		case 'S':
 			// Ignore these for now
 			cn.readCString()
@@ -220,14 +221,33 @@ func (cn *Conn) startup(o Values) {
 	return
 }
 
-func (cn *Conn) auth() {
+func (cn *Conn) auth(o Values) {
 	var code int32
 	cn.read(&code)
 	switch code {
 	case 0: // OK
 		return
+	case 5: // MD5
+	  var salt string
+		cn.read(&salt)
+		// in SQL: concat('md5', md5(concat(md5(concat(password, username)), random-salt)))
+		sum := concat("md5", md5s(concat(md5s(concat(o.Get("password"), o.Get("user"))), salt)))
+		cn.setHead('p')
+		cn.write(sum)
+		cn.write("")
+		cn.sendMsg()
 	}
 	panic(errf("unknown response for authentication: '%d'", code))
+}
+
+func concat(a, b string) string {
+	return a + b
+}
+
+func md5s(s string) string {
+	h := md5.New()
+	h.Write([]byte(s))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 func (cn *Conn) Close() error {
@@ -426,7 +446,7 @@ func ParseURL(us string) (string, error) {
 		if un := u.User.Username(); un != "" {
 			result = append(result, fmt.Sprintf("user=%s", un))
 		}
-		if p, set := u.User.Password(); set {
+		if p, set := u.User.Password(); set && p != "" {
 			result = append(result, fmt.Sprintf("password=%s", p))
 		}
 	}
