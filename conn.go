@@ -234,7 +234,7 @@ func (cn *Conn) auth(o Values) {
 		salt := make([]byte, 4)
 		cn.read(salt)
 		// in SQL: concat('md5', md5(concat(md5(concat(password, username)), random-salt)))
-		sum := concat("md5", md5s(concat(md5s(concat(o.Get("password"), o.Get("user"))), string(salt))))
+		sum := "md5" + md5s(md5s(o.Get("password") + o.Get("user")) + string(salt))
 		cn.setHead('p')
 		cn.write(sum)
 		cn.sendMsg()
@@ -251,10 +251,6 @@ func (cn *Conn) auth(o Values) {
 	}
 
 	panic(errf("unknown response for authentication: '%d'", code))
-}
-
-func concat(a, b string) string {
-	return a + b
 }
 
 func md5s(s string) string {
