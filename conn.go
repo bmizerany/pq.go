@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"strings"
 )
 
@@ -397,6 +398,39 @@ func parseConnString(cs string) (Values, error) {
 		o.Set(kv[0], kv[1])
 	}
 	return o, nil
+}
+
+func ParseConnUrl(u *url.URL) (string, error) {
+	if u.Scheme != "postgres" {
+		return "", fmt.Errorf("invalid connection protocol: %s", u.Scheme)
+	}
+	result := make([]string, 0, 5)
+	host := ""
+	switch i := strings.Index(u.Host, ":"); i {
+	case -1:
+		host = u.Host
+	case 0:
+		return "", fmt.Errorf("missing host")
+	default:
+		host = u.Host[:i]
+		result = append(result, fmt.Sprintf("port=%s", u.Host[i+1:]))
+	}
+	result = append(result, fmt.Sprintf("host=%s", host))
+
+	if u.User != nil {
+		if un := u.User.Username(); un != "" {
+			result = append(result, fmt.Sprintf("user=%s", un))
+		}
+		if p, set := u.User.Password(); set {
+			result = append(result, fmt.Sprintf("password=%s", p))
+		}
+	}
+
+	if u.Path != "" && u.Path != "/" {
+		result = append(result, fmt.Sprintf("dbname=%s", u.Path[1:]))
+	}
+
+	return strings.Join(result, " "), nil
 }
 
 func errf(s string, args ...interface{}) error {

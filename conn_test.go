@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"testing"
 )
@@ -49,5 +50,48 @@ func TestSimple(t *testing.T) {
 
 	if i != 1 {
 		t.Fatal("expected i to be 1")
+	}
+}
+
+func TestSimpleParseConnUrl(t *testing.T) {
+	url, _ := url.Parse("postgres://hostname.remote")
+
+	expected := "host=hostname.remote"
+	str, err := ParseConnUrl(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if str != expected {
+		t.Fatalf("unexpected result from ParseConnUrl:\n+ %v\n- %v", str, expected)
+	}
+}
+
+func TestFullParseConnUrl(t *testing.T) {
+	url, _ := url.Parse("postgres://username:secret@hostname.remote:1234/database")
+
+	expected := "port=1234 host=hostname.remote user=username password=secret dbname=database"
+	str, err := ParseConnUrl(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if str != expected {
+		t.Fatalf("unexpected result from ParseConnUrl:\n+ %s\n- %s", str, expected)
+	}
+}
+
+func TestInvalidProtocolParseConnUrl(t *testing.T) {
+	url, _ := url.Parse("http://hostname.remote")
+
+	_, err := ParseConnUrl(url)
+	switch err {
+	case nil:
+		t.Fatal("Expected an error from parsing invalid protocol")
+	default:
+		msg := "invalid connection protocol: http"
+		if err.Error() != msg {
+			t.Fatal("Unexpected error message:\n+ %s\n- %s", err.Error(), msg)
+		}
 	}
 }
