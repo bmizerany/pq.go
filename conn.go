@@ -2,6 +2,7 @@ package pq
 
 import (
 	"bytes"
+	"crypto/md5"
 	"crypto/tls"
 	"database/sql"
 	"database/sql/driver"
@@ -9,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"crypto/md5"
 	"net"
 	"net/url"
 	"strings"
