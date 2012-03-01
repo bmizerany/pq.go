@@ -164,13 +164,16 @@ func Open(name string) (cn *Conn, err error) {
 }
 
 func (cn *Conn) ssl(o Values) {
+	tlsConf := tls.Config{}
 	switch o.Get("sslmode") {
 	case "require", "":
+		tlsConf.InsecureSkipVerify = true
+	case "verify-full":
 		// fall out
 	case "disable":
 		return
 	default:
-		panic(errf(`unsupported sslmode %q; only "require" (default) and "disable" supported`))
+		panic(errf(`unsupported sslmode %q; only "require" (default), "verify-full", and "disable" supported`))
 	}
 
 	cn.setHead(0)
@@ -187,7 +190,7 @@ func (cn *Conn) ssl(o Values) {
 		panic(ErrSSLNotSupported)
 	}
 
-	cn.c = tls.Client(cn.c, nil)
+	cn.c = tls.Client(cn.c, &tlsConf)
 }
 
 func (cn *Conn) startup(o Values) {
