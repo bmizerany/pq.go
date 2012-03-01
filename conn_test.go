@@ -1,108 +1,53 @@
 package pq
 
 import (
-	"github.com/bmizerany/assert"
+	"database/sql"
+	"fmt"
 	"io"
-	"net"
 	"os"
 	"testing"
 )
 
-func TestConnPrepareErr(t *testing.T) {
-	nc, err := net.Dial("tcp", "localhost:5432")
-	assert.Equalf(t, nil, err, "%v", err)
-
-	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")}, "")
-	assert.Equalf(t, nil, err, "%v", err)
-
-	_, err = cn.Prepare("SELECT length($1) AS ZOMG! AN ERR")
-	assert.NotEqual(t, nil, err)
+type readWriteLogger struct {
+	io.ReadWriteCloser
 }
 
-func TestConnPrepare(t *testing.T) {
-	nc, err := net.Dial("tcp", "localhost:5432")
-	assert.Equalf(t, nil, err, "%v", err)
-
-	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")}, "")
-	assert.Equalf(t, nil, err, "%v", err)
-
-	stmt, err := cn.Prepare("SELECT length($1) AS foo WHERE true = $2")
-	assert.Equalf(t, nil, err, "%v", err)
-	assert.Equal(t, 2, stmt.NumInput())
-
-	rows, err := stmt.Query([]interface{}{"testing", true})
-	assert.Equalf(t, nil, err, "%v", err)
-	assert.Equal(t, []string{"foo"}, rows.Columns())
-
-	dest := make([]interface{}, 1)
-	err = rows.Next(dest)
-	assert.Equalf(t, nil, err, "%v", err)
-	assert.Equal(t, []interface{}{"7"}, dest)
-
-	err = rows.Next(dest)
-	assert.Equalf(t, io.EOF, err, "%v", err)
-
-	rows, err = stmt.Query([]interface{}{"testing", false})
-	assert.Equalf(t, nil, err, "%v", err)
-	assert.Equal(t, []string{"foo"}, rows.Columns())
-
-	err = rows.Next(dest)
-	assert.Equalf(t, io.EOF, err, "%v", err)
+func (rwl *readWriteLogger) Write(p []byte) (int, error) {
+	fmt.Printf("%q\n", p)
+	return rwl.ReadWriteCloser.Write(p)
 }
 
-func TestConnNotify(t *testing.T) {
-	nc, err := net.Dial("tcp", "localhost:5432")
-	assert.Equalf(t, nil, err, "%v", err)
-
-	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")}, "")
-	assert.Equalf(t, nil, err, "%v", err)
-
-	// Listen
-	lstmt, err := cn.Prepare("LISTEN test")
-	assert.Equalf(t, nil, err, "%v", err)
-
-	_, err = lstmt.Exec(nil)
-	assert.Equalf(t, nil, err, "%v", err)
-
-	err = lstmt.Close()
-	assert.Equalf(t, nil, err, "%v", err)
-
-	// Notify
-	nstmt, err := cn.Prepare("NOTIFY test, 'foo'")
-	assert.Equalf(t, nil, err, "%v", err)
-
-	_, err = nstmt.Exec(nil)
-	assert.Equalf(t, nil, err, "%v", err)
-
-	err = nstmt.Close()
-	assert.Equalf(t, nil, err, "%v", err)
-
-	n := <-cn.Notifies
-	assert.NotEqual(t, 0, n.Pid)
-	assert.Equal(t, "test", n.From)
-	assert.Equal(t, "foo", n.Payload)
+func (rwl *readWriteLogger) Read(p []byte) (int, error) {
+	defer fmt.Printf("%q\n", p)
+	return rwl.ReadWriteCloser.Read(p)
 }
 
-func TestAuthCleartextPassword(t *testing.T) {
-	c, err := OpenRaw("postgres://gopqtest:foo@localhost:5432/" + os.Getenv("USER"))
-	//c, err := OpenRaw("postgres://gopqtest@localhost:5432/"+os.Getenv("USER"))
-	assert.Equalf(t, nil, err, "%v", err)
+func TestSimple(t *testing.T) {
+	db, err := sql.Open("postgres", "sslmode=disable user="+os.Getenv("USER"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
 
-	s, err := c.Prepare("SELECT 1")
-	assert.Equalf(t, nil, err, "%v", err)
+	r, err := db.Query("SELECT 1")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	_, err = s.Exec(nil)
-	assert.Equalf(t, nil, err, "%v", err)
-}
+	if !r.Next() {
+		if r.Err() != nil {
+			t.Fatal(r.Err())
+		}
+		t.Fatal("row expected")
+	}
 
-func TestAuthMissingCleartextPassword(t *testing.T) {
-	c, err := OpenRaw("postgres://gopqtest@localhost:5432/" + os.Getenv("USER"))
-	assert.NotEqual(t, nil, err)
-	assert.Equal(t, (*Conn)(nil), c)
-}
+	var i int
+	err = r.Scan(&i)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-func TestAuthWrongCleartextPassword(t *testing.T) {
-	c, err := OpenRaw("postgres://gopqtest:bar@localhost:5432/" + os.Getenv("USER"))
-	assert.NotEqual(t, nil, err)
-	assert.Equal(t, (*Conn)(nil), c)
+	if i != 1 {
+		t.Fatal("expected i to be 1")
+	}
 }

@@ -1,3 +1,5 @@
+*.old
 *.out
+*.test
 .DS_Store
-testdb
+.db

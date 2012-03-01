@@ -1,456 +1,425 @@
 package pq
 
 import (
+	"bytes"
+	"crypto/tls"
 	"database/sql"
 	"database/sql/driver"
+	"encoding/binary"
+	"errors"
 	"fmt"
-	"github.com/bmizerany/pq.go/proto"
 	"io"
 	"net"
-	"net/url"
-	"path"
 	"strings"
 )
 
-type Driver struct{}
+var (
+	ErrSSLNotSupported = errors.New("SSL is not enabled on the server")
+)
 
-func (dr *Driver) Open(name string) (driver.Conn, error) {
-	return OpenRaw(name)
+type h struct {
+	T int8
+	L int32
 }
 
-func OpenRaw(uarel string) (*Conn, error) {
-	u, err := url.Parse(uarel)
-	if err != nil {
-		return nil, err
-	}
-
-	if strings.Index(u.Host, ":") < 0 {
-		u.Host += ":5432"
-	}
-
-	nc, err := net.Dial("tcp", u.Host)
-	if err != nil {
-		return nil, err
-	}
-
-	params := make(proto.Values)
-	params.Set("user", u.User.Username())
-	if u.Path != "" {
-		params.Set("database", path.Base(u.Path))
-	}
-
-	pw, _ := u.User.Password()
-	return New(nc, params, pw)
+type msg struct {
+	*h
+	b *bytes.Buffer
 }
 
-var defaultDriver = &Driver{}
+func newMsg() *msg {
+	return &msg{h: new(h), b: new(bytes.Buffer)}
+}
+
+func (m *msg) setHead(t int8) {
+	if m.b.Len() != 0 {
+		panic(errf("attempt to setHead('%c') with %d byte(s) in buffer: %q", t, m.b.Len(), m.b))
+	}
+	m.T = t
+}
+
+func (m *msg) readCString() string {
+	l, err := m.b.ReadString(0)
+	if err != nil {
+		panic(err)
+	}
+
+	if len(l) == 0 {
+		return ""
+	}
+
+	return l[:len(l)-1]
+}
+
+func (m *msg) read(x interface{}) {
+	err := binary.Read(m.b, binary.BigEndian, x)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
+func (m *msg) write(x ...interface{}) {
+	for _, o := range x {
+		switch v := o.(type) {
+		case string:
+			_, err := io.WriteString(m.b, v+"\000")
+			if err != nil {
+				panic(err)
+			}
+		default:
+			err := binary.Write(m.b, binary.BigEndian, v)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+}
+
+func (m *msg) writeTo(w io.Writer) {
+	m.L = int32(m.b.Len() + 4)
+
+	var x interface{} = m.h
+
+	if m.T == 0 {
+		x = m.L
+	}
+
+	err := binary.Write(w, binary.BigEndian, x)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = m.b.WriteTo(w)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (m *msg) readFrom(r io.Reader) {
+	err := binary.Read(r, binary.BigEndian, m.h)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = io.CopyN(m.b, r, int64(m.L-4))
+	if err != nil {
+		panic(err)
+	}
+}
+
+type Values map[string]string
+
+func (vs Values) Get(k string) (v string) {
+	v, _ = vs[k]
+	return v
+}
+
+func (vs Values) Set(k, v string) {
+	vs[k] = v
+}
+
+type pgdriver struct{}
+
+func (*pgdriver) Open(name string) (driver.Conn, error) {
+	return Open(name)
+}
 
 func init() {
-	sql.Register("postgres", defaultDriver)
+	sql.Register("postgres", &pgdriver{})
 }
+
+type stateFn func(cn *Conn) stateFn
 
 type Conn struct {
-	Settings proto.Values
-	Pid      int
-	Secret   int
-	Status   byte
-	Notifies <-chan *proto.Notify
-	User     string
-
-	rwc io.ReadWriteCloser
-	p   *proto.Conn
-	err error
+	c net.Conn
+	*msg
+	cid    int32
+	pid    int32
+	status byte
 }
 
-func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, error) {
-	notifies := make(chan *proto.Notify, 5) // 5 should be enough to prevent simple blocking
+func Open(name string) (cn *Conn, err error) {
+	defer recoverErr(&err)
 
-	cn := &Conn{
-		Notifies: notifies,
-		Settings: make(proto.Values),
-		User:     params.Get("user"),
-		p:        proto.New(rwc, notifies),
-	}
-
-	err := cn.p.Startup(params)
+	// TODO: less naive parsing.
+	// See: http://www.postgresql.org/docs/7.4/static/libpq.html#LIBPQ-CONNECT
+	o, err := parseConnString(name)
 	if err != nil {
 		return nil, err
 	}
 
+	c, err := dial(o)
+	if err != nil {
+		return nil, err
+	}
+
+	cn = &Conn{c: c, msg: newMsg()}
+	cn.ssl(o)
+	cn.startup(o)
+
+	return
+}
+
+func (cn *Conn) ssl(o Values) {
+	switch o.Get("sslmode") {
+	case "require", "":
+		// fall out
+	case "disable":
+		return
+	default:
+		panic(errf(`unsupported sslmode %q; only "require" (default) and "disable" supported`))
+	}
+
+	cn.setHead(0)
+	cn.write(int32(80877103))
+	cn.sendMsg()
+
+	b := make([]byte, 1)
+	_, err := io.ReadFull(cn.c, b)
+	if err != nil {
+		panic(err)
+	}
+
+	if b[0] != 'S' {
+		panic(ErrSSLNotSupported)
+	}
+
+	cn.c = tls.Client(cn.c, nil)
+}
+
+func (cn *Conn) startup(o Values) {
+	cn.setHead(0)
+	cn.write(int32(196608))
+	cn.write("user", o.Get("user"))
+	cn.write("database", o.Get("dbname"))
+	cn.write("")
+	cn.sendMsg()
+
 	for {
-		m, err := cn.p.Next()
-		if err != nil {
-			return nil, err
-		}
-
-		if m.Err != nil {
-			return nil, m.Err
-		}
-
-		switch m.Type {
-		default:
-			notExpected(m.Type)
+		cn.recvMsg()
+		switch cn.T {
 		case 'R':
-			switch m.Auth {
-			case proto.AuthOk:
-				continue
-			case proto.AuthPlain:
-				err := cn.p.Password(pw)
-				if err != nil {
-					rwc.Close()
-					return nil, err
-				}
-			case proto.AuthMd5:
-				err := cn.p.PasswordMd5(m.Salt, cn.User, pw)
-				if err != nil {
-					rwc.Close()
-					return nil, err
-				}
-			default:
-				return nil, fmt.Errorf("pq: unknown authentication type (%d)", m.Auth)
-			}
+			cn.auth()
 		case 'S':
-			cn.Settings.Set(m.Key, m.Val)
+			// Ignore these for now
+			cn.readCString()
+			cn.readCString()
 		case 'K':
-			cn.Pid = m.Pid
-			cn.Secret = m.Secret
+			cn.read(&cn.cid)
+			cn.read(&cn.pid)
 		case 'Z':
-			return cn, nil
-		}
-	}
-
-	panic("not reached")
-}
-
-func (cn *Conn) Exec(query string, args []interface{}) (driver.Result, error) {
-	if len(args) == 0 {
-		err := cn.p.SimpleQuery(query)
-		if err != nil {
-			return nil, err
-		}
-
-		var serr error
-		for {
-			m, err := cn.p.Next()
-			if err != nil {
-				return nil, err
-			}
-
-			switch m.Type {
-			case 'E':
-				serr = m.Err
-			case 'Z':
-				return driver.RowsAffected(0), serr
-			}
-		}
-	} else {
-		stmt, err := cn.Prepare(query)
-		if err != nil {
-			return nil, err
-		}
-
-		return stmt.Exec(args)
-	}
-
-	panic("not reached")
-}
-
-func (cn *Conn) Prepare(query string) (driver.Stmt, error) {
-	name := "" //TODO: support named queries
-
-	stmt := &Stmt{
-		Name:  name,
-		query: query,
-		p:     cn.p,
-	}
-
-	err := stmt.Parse()
-	if err != nil {
-		return nil, err
-	}
-
-	err = stmt.Describe()
-	if err != nil {
-		return nil, err
-	}
-
-	return stmt, nil
-}
-
-type Stmt struct {
-	Name string
-
-	query  string
-	p      *proto.Conn
-	params []int
-	names  []string
-	err    error
-}
-
-func (stmt *Stmt) Parse() error {
-	err := stmt.p.Parse(stmt.Name, stmt.query)
-	if err != nil {
-		return err
-	}
-
-	err = stmt.p.Sync()
-	if err != nil {
-		return err
-	}
-
-	var serr error
-	for {
-		m, err := stmt.p.Next()
-		if err != nil {
-			return err
-		}
-
-		switch m.Type {
+			cn.read(&cn.status)
+			return
 		default:
-			notExpected(m.Type)
-		case '1':
-			// ignore
-		case 'Z':
-			return serr
-		case 'E':
-			serr = m.Err
+			panic(errf("unknown response for startup: '%c'", cn.T))
 		}
-	}
-
-	panic("not reached")
-}
-
-func (stmt *Stmt) Describe() error {
-	err := stmt.p.Describe(proto.Statement, stmt.Name)
-	if err != nil {
-		return err
-	}
-
-	err = stmt.p.Sync()
-	if err != nil {
-		return err
-	}
-
-	var serr error
-	for {
-		m, err := stmt.p.Next()
-		if err != nil {
-			return err
-		}
-
-		switch m.Type {
-		default:
-			notExpected(m.Type)
-		case 'E':
-			serr = m.Err
-		case 'n':
-			// no data
-		case 't':
-			stmt.params = m.Params
-		case 'T':
-			stmt.names = m.ColNames
-		case 'Z':
-			return serr
-		}
-	}
-
-	panic("not reached")
-}
-
-func (stmt *Stmt) Close() (err error) {
-	err = stmt.p.ClosePP(proto.Statement, stmt.Name)
-	if err != nil {
-		return err
-	}
-
-	err = stmt.p.Sync()
-	if err != nil {
-		return err
-	}
-
-	var done bool
-	for {
-		m, err := stmt.p.Next()
-		if err != nil {
-			return err
-		}
-		if m.Err != nil {
-			return m.Err
-		}
-
-		if m.Type == '3' {
-			done = true
-		}
-
-		if done && m.Type == 'Z' {
-			return nil
-		}
-	}
-
-	panic("not reached")
-}
-
-func (stmt *Stmt) NumInput() int {
-	return len(stmt.params)
-}
-
-func (stmt *Stmt) Exec(args []interface{}) (driver.Result, error) {
-	// NOTE: should return []drive.Result, because a PS can have more
-	// than one statement and recv more than one tag.
-	rows, err := stmt.Query(args)
-	if err != nil {
-		return nil, err
-	}
-
-	for err = rows.Next(nil); err == nil; err = rows.Next(nil) {
-	}
-
-	if err != io.EOF {
-		// We got an error, now we need to read the rest of the messages
-		for rows.Next(nil) != io.EOF {
-		}
-
-		return nil, err
-	}
-
-	// TODO: use the tag given by CommandComplete
-	return driver.RowsAffected(0), nil
-}
-
-func (stmt *Stmt) Query(args []interface{}) (driver.Rows, error) {
-	// For now, we'll just say they're strings
-	err := stmt.p.Bind(stmt.Name, stmt.Name, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	err = stmt.p.Execute(stmt.Name, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	err = stmt.p.Sync()
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		m, err := stmt.p.Next()
-		if err != nil {
-			return nil, err
-		}
-		if m.Err != nil {
-			return nil, m.Err
-		}
-
-		switch m.Type {
-		default:
-			notExpected(m.Type)
-		case '2':
-			rows := &Rows{
-				p:     stmt.p,
-				names: stmt.names,
-			}
-			return rows, nil
-		}
-	}
-
-	panic("not reached")
-}
-
-type Rows struct {
-	p     *proto.Conn
-	names []string
-	c     int
-	done  bool
-}
-
-func (r *Rows) Close() (err error) {
-	// Drain the remaining rows
-	for err == nil {
-		err = r.Next(nil)
-	}
-
-	if err == io.EOF {
-		return nil
 	}
 
 	return
 }
 
-func (r *Rows) Complete() int {
-	return r.c
-}
-
-func (r *Rows) Columns() []string {
-	return r.names
-}
-
-func (r *Rows) Next(dest []interface{}) (err error) {
-	if r.done {
-		return io.EOF
+func (cn *Conn) auth() {
+	var code int32
+	cn.read(&code)
+	switch code {
+	case 0: // OK
+		return
 	}
-
-	var m *proto.Msg
-	for {
-		m, err = r.p.Next()
-		if err != nil {
-			return err
-		}
-		if m.Err != nil {
-			return m.Err
-		}
-
-		switch m.Type {
-		default:
-			notExpected(m.Type)
-		case 'D':
-			for i := 0; i < len(dest); i++ {
-				if m.Cols[i] == nil {
-					dest[i] = nil
-				} else {
-					dest[i] = string(m.Cols[i])
-				}
-			}
-			return nil
-		case 'C':
-			r.c++
-		case 'Z':
-			r.done = true
-			return io.EOF
-		}
-	}
-
-	panic("not reached")
-}
-
-func (cn *Conn) Begin() (driver.Tx, error) {
-	_, err := cn.Exec("BEGIN", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Tx{cn}, nil
+	panic(errf("unknown response for authentication: '%d'", code))
 }
 
 func (cn *Conn) Close() error {
-	return cn.p.Close()
+	return cn.c.Close()
 }
 
-func notExpected(c byte) {
-	panic(fmt.Sprintf("pq: unexpected response from server (%c)", c))
+func (cn *Conn) Begin() (driver.Tx, error) {
+	panic("todo")
 }
 
-type Tx struct {
-	cn *Conn
+func (cn *Conn) Prepare(q string) (st driver.Stmt, err error) {
+	defer recoverErr(&err)
+
+	cn.setHead('P')
+	cn.write("")
+	cn.write(q)
+	cn.write(int16(0))
+	cn.sendMsg()
+
+	cn.setHead('S')
+	cn.sendMsg()
+
+	cn.recvMsg()
+	if cn.T != '1' {
+		panic(errf("unknown response from parse: '%c'", cn.T))
+	}
+
+	cn.recvMsg()
+	if cn.T != 'Z' {
+		panic(errf("unknown response from parse: '%c'", cn.T))
+	}
+	cn.read(&cn.status)
+
+	return &stmt{Conn: cn}, nil
 }
 
-func (t *Tx) Commit() error {
-	_, err := t.cn.Exec("COMMIT", nil)
-	return err
+func (cn *Conn) sendMsg() {
+	cn.writeTo(cn.c)
 }
 
-func (t *Tx) Rollback() error {
-	_, err := t.cn.Exec("ROLLBACK", nil)
-	return err
+func (cn *Conn) recvMsg() {
+	cn.readFrom(cn.c)
+	if cn.T == 'E' {
+		panic(readError(cn))
+	}
+}
+
+type stmt struct {
+	*Conn
+	q string
+}
+
+func (st *stmt) Close() error                                 { return nil }
+func (st *stmt) NumInput() int                                { return -1 }
+func (st *stmt) Exec(v []driver.Value) (driver.Result, error) { panic("todo") }
+
+func (st *stmt) Query(v []driver.Value) (r driver.Rows, err error) {
+	defer recoverErr(&err)
+
+	st.setHead('B')
+	st.write("")
+	st.write("")
+	st.write(int16(0))
+	st.write(int16(len(v)))
+	for _, v := range v {
+		l, s := encodeParam(v)
+		st.write(l, s)
+	}
+	st.write(int16(0))
+	st.sendMsg()
+
+	st.setHead('E')
+	st.write("")
+	st.write(int32(0))
+	st.sendMsg()
+
+	st.setHead('S')
+	st.sendMsg()
+
+	st.recvMsg()
+	if st.T != '2' {
+		panic(errf("unknown response for bind: '%c'", st.T))
+	}
+
+	return &rows{Conn: st.Conn}, nil
+}
+
+type rows struct {
+	*Conn
+}
+
+func (r *rows) Columns() []string {
+	return []string{""}
+}
+
+func (r *rows) Close() error {
+	// TODO: send cancel if in TX
+	return nil
+}
+
+func (r *rows) Next(dest []driver.Value) (err error) {
+	defer recoverErr(&err)
+
+	r.recvMsg()
+	switch {
+	case r.T == 'C':
+		return io.EOF
+	case r.T != 'D':
+		return errf("unknown response for execute: '%c'", r.T)
+	}
+
+	var n int16
+	var l int32
+
+	r.read(&n)
+	for i := int16(0); i < n; i++ {
+		r.read(&l)
+		b := make([]byte, l)
+		r.read(b)
+		dest[i] = b
+	}
+
+	return nil
+}
+
+func recoverErr(err *error) {
+	x := recover()
+	if x == nil {
+		return
+	}
+
+	if e, ok := x.(error); ok {
+		*err = e
+		return
+	}
+
+	panic(x)
+}
+
+func dial(o Values) (net.Conn, error) {
+	// TODO: support possible network types
+	// See: http://www.postgresql.org/docs/7.4/static/libpq.html#LIBPQ-CONNECT
+	host := o.Get("host")
+	if strings.HasPrefix(host, "/") {
+		return net.Dial("unix", host)
+	}
+
+	if host == "" {
+		host = "localhost"
+	}
+
+	port := o.Get("port")
+	if port == "" {
+		port = "5432"
+	}
+
+	return net.Dial("tcp", host+":"+port)
+}
+
+func parseConnString(cs string) (Values, error) {
+	o := make(Values)
+	parts := strings.Split(cs, " ")
+	for _, p := range parts {
+		kv := strings.Split(p, "=")
+		if len(kv) < 2 {
+			return nil, errf("invalid connection option: %q", p)
+		}
+		o.Set(kv[0], kv[1])
+	}
+	return o, nil
+}
+
+func errf(s string, args ...interface{}) error {
+	return fmt.Errorf("pq: "+s, args...)
+}
+
+func encodeParam(param interface{}) (int32, string) {
+	var s string
+	switch param.(type) {
+	default:
+		panic(fmt.Sprintf("unknown type for %T", param))
+	case int, uint8, uint16, uint32, uint64, int8, int16, int32, int64:
+		s = fmt.Sprintf("%d", param)
+	case string, []byte:
+		s = fmt.Sprintf("%s", param)
+	case bool:
+		s = fmt.Sprintf("%t", param)
+	}
+
+	return int32(len(s)), s
+}
+
+func readError(cn *Conn) error {
+	// TODO: parse error correctly
+	return fmt.Errorf(cn.b.String())
 }
