@@ -293,6 +293,7 @@ func (cn *Conn) Commit() (err error) {
 }
 
 func (cn *Conn) Begin() (tx driver.Tx, err error) {
+	// TODO: maybe cache stmt to avoid repreparing?
     s, err := cn.Prepare("BEGIN")
     if err != nil {
         return nil, err
