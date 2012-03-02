@@ -393,7 +393,18 @@ func (r *rows) Columns() []string {
 }
 
 func (r *rows) Close() error {
-	// TODO: send cancel if in TX
+	for {
+		err := r.Next(nil)
+		r.msg = newMsg()
+		switch err {
+		case nil:
+		case sql.ErrNoRows:
+		default:
+			return err
+		}
+
+		// Throw away messages we don't care about
+	}
 	return nil
 }
 
@@ -403,7 +414,12 @@ func (r *rows) Next(dest []driver.Value) (err error) {
 	r.recvMsg()
 	switch {
 	case r.T == 'C':
+		r.recvMsg()
+		if r.T != 'Z' {
+			return errf("expected 'Z' but got: '%c'", r.T)
+		}
 		return io.EOF
+	case r.T == 'Z':
 	case r.T != 'D':
 		return errf("unknown response for execute: '%c'", r.T)
 	}
