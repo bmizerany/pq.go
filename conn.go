@@ -234,7 +234,7 @@ func (cn *Conn) auth(o Values) {
 		salt := make([]byte, 4)
 		cn.read(salt)
 		// in SQL: concat('md5', md5(concat(md5(concat(password, username)), random-salt)))
-		sum := "md5" + md5s(md5s(o.Get("password") + o.Get("user")) + string(salt))
+		sum := "md5" + md5s(md5s(o.Get("password")+o.Get("user"))+string(salt))
 		cn.setHead('p')
 		cn.write(sum)
 		cn.sendMsg()
@@ -263,49 +263,48 @@ func (cn *Conn) Close() error {
 	return cn.c.Close()
 }
 
-
 func (cn *Conn) Rollback() (err error) {
-    s, err := cn.Prepare("ROLLBACK")
-    if err != nil {
-        return err
-    }
-    defer s.Close()
+	s, err := cn.Prepare("ROLLBACK")
+	if err != nil {
+		return err
+	}
+	defer s.Close()
 
-    _, err = s.Query(nil)
-    if err != nil {
-        return err
-    }
-    return
+	_, err = s.Query(nil)
+	if err != nil {
+		return err
+	}
+	return
 }
 
 func (cn *Conn) Commit() (err error) {
-    s, err := cn.Prepare("COMMIT")
-    if err != nil {
-        return err
-    }
-    defer s.Close()
+	s, err := cn.Prepare("COMMIT")
+	if err != nil {
+		return err
+	}
+	defer s.Close()
 
-    _, err = s.Query(nil)
-    if err != nil {
-        return err
-    }
-    return
+	_, err = s.Query(nil)
+	if err != nil {
+		return err
+	}
+	return
 }
 
 func (cn *Conn) Begin() (tx driver.Tx, err error) {
 	// TODO: maybe cache stmt to avoid repreparing?
-    s, err := cn.Prepare("BEGIN")
-    if err != nil {
-        return nil, err
-    }
-    defer s.Close()
+	s, err := cn.Prepare("BEGIN")
+	if err != nil {
+		return nil, err
+	}
+	defer s.Close()
 
-    _, err = s.Query(nil)
-    if err != nil {
-        return nil, err
-    }
+	_, err = s.Query(nil)
+	if err != nil {
+		return nil, err
+	}
 
-    return cn, err
+	return cn, err
 }
 
 func (cn *Conn) Prepare(q string) (st driver.Stmt, err error) {
