@@ -269,6 +269,8 @@ func (cn *Conn) Rollback() (err error) {
     if err != nil {
         return err
     }
+    defer s.Close()
+
     _, err = s.Query([]driver.Value{})
     if err != nil {
         return err
@@ -281,6 +283,8 @@ func (cn *Conn) Commit() (err error) {
     if err != nil {
         return err
     }
+    defer s.Close()
+
     _, err = s.Query([]driver.Value{})
     if err != nil {
         return err
@@ -293,6 +297,8 @@ func (cn *Conn) Begin() (tx driver.Tx, err error) {
     if err != nil {
         return nil, err
     }
+    defer s.Close()
+
     _, err = s.Query([]driver.Value{})
     if err != nil {
         return nil, err
