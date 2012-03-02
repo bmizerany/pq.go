@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"os"
 	"testing"
 )
 
@@ -23,7 +22,7 @@ func (rwl *readWriteLogger) Read(p []byte) (int, error) {
 }
 
 func TestSimple(t *testing.T) {
-	db, err := sql.Open("postgres", "sslmode=disable user="+os.Getenv("USER"))
+	db, err := sql.Open("postgres", "sslmode=require user=pqgotest password=foo")
 	if err != nil {
 		t.Fatal(err)
 	}
