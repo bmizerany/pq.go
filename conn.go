@@ -263,8 +263,42 @@ func (cn *Conn) Close() error {
 	return cn.c.Close()
 }
 
-func (cn *Conn) Begin() (driver.Tx, error) {
-	panic("todo")
+
+func (cn *Conn) Rollback() (err error) {
+    s, err := cn.Prepare("ROLLBACK")
+    if err != nil {
+        return err
+    }
+    _, err = s.Query([]driver.Value{})
+    if err != nil {
+        return err
+    }
+    return
+}
+
+func (cn *Conn) Commit() (err error) {
+    s, err := cn.Prepare("COMMIT")
+    if err != nil {
+        return err
+    }
+    _, err = s.Query([]driver.Value{})
+    if err != nil {
+        return err
+    }
+    return
+}
+
+func (cn *Conn) Begin() (tx driver.Tx, err error) {
+    s, err := cn.Prepare("BEGIN")
+    if err != nil {
+        return nil, err
+    }
+    _, err = s.Query([]driver.Value{})
+    if err != nil {
+        return nil, err
+    }
+
+    return cn, err
 }
 
 func (cn *Conn) Prepare(q string) (st driver.Stmt, err error) {
