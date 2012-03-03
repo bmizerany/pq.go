@@ -418,6 +418,7 @@ func (r *rows) Next(dest []driver.Value) (err error) {
 		if r.T != 'Z' {
 			return errf("expected 'Z' but got: '%c'", r.T)
 		}
+		r.read(&r.status)
 		return io.EOF
 	case r.T == 'Z':
 	case r.T != 'D':
