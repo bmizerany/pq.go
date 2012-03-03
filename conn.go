@@ -393,9 +393,12 @@ func (r *rows) Columns() []string {
 }
 
 func (r *rows) Close() error {
+	defer func() {
+		r.msg = newMsg()
+	}()
+
 	for {
 		err := r.Next(nil)
-		r.msg = newMsg()
 		switch err {
 		case nil:
 		case sql.ErrNoRows:
