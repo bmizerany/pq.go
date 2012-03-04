@@ -69,6 +69,22 @@ func TestMultipleQueries(t *testing.T) {
 	}
 }
 
+func TestParams(t *testing.T) {
+	db, err := sql.Open("postgres", "host=localhost user=pqgotest password=foo sslmode=disable")
+	if err != nil {
+		t.Fatalf("unable to open database connection: %v", err)
+	}
+
+	var n int
+	err = db.QueryRow("SELECT 1 WHERE true = $1", true).Scan(&n)
+	switch {
+	case err != nil:
+		t.Fatalf("%s: at %d", err, n)
+	case n != 1:
+		t.Fatalf("expected 1 at %d", n)
+	}
+}
+
 func TestSimpleParseURL(t *testing.T) {
 	expected := "host=hostname.remote"
 	str, err := ParseURL("postgres://hostname.remote")

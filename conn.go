@@ -531,7 +531,7 @@ func errf(s string, args ...interface{}) error {
 	return fmt.Errorf("pq: "+s, args...)
 }
 
-func encodeParam(param interface{}) (int32, string) {
+func encodeParam(param interface{}) (int32, []byte) {
 	var s string
 	switch param.(type) {
 	default:
@@ -544,7 +544,7 @@ func encodeParam(param interface{}) (int32, string) {
 		s = fmt.Sprintf("%t", param)
 	}
 
-	return int32(len(s)), s
+	return int32(len(s)), []byte(s)
 }
 
 func readError(cn *Conn) error {
