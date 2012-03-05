@@ -349,6 +349,7 @@ type stmt struct {
 	q string
 }
 
+// Need to talk with bradfitz about this before implementing these.
 func (st *stmt) Close() error                                 { return nil }
 func (st *stmt) NumInput() int                                { return -1 }
 func (st *stmt) Exec(v []driver.Value) (driver.Result, error) { panic("todo") }
