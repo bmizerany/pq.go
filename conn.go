@@ -355,7 +355,7 @@ func (st *stmt) NumInput() int                                { return -1 }
 func (st *stmt) Exec(v []driver.Value) (driver.Result, error) { panic("todo") }
 
 func (st *stmt) Query(v []driver.Value) (r driver.Rows, err error) {
-	// defer recoverErr(&err)
+	defer recoverErr(&err)
 
 	st.setHead('D')
 	st.write(byte('S'))
