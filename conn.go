@@ -424,7 +424,6 @@ func (r *rows) Next(dest []driver.Value) (err error) {
 		}
 		r.read(&r.status)
 		return io.EOF
-	case r.T == 'Z':
 	case r.T != 'D':
 		return errf("unknown response for execute: '%c'", r.T)
 	}
