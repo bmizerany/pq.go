@@ -355,7 +355,12 @@ func (st *stmt) NumInput() int                                { return -1 }
 func (st *stmt) Exec(v []driver.Value) (driver.Result, error) { panic("todo") }
 
 func (st *stmt) Query(v []driver.Value) (r driver.Rows, err error) {
-	defer recoverErr(&err)
+	// defer recoverErr(&err)
+
+	st.setHead('D')
+	st.write(byte('S'))
+	st.write("")
+	st.sendMsg()
 
 	st.setHead('B')
 	st.write("")
@@ -377,20 +382,51 @@ func (st *stmt) Query(v []driver.Value) (r driver.Rows, err error) {
 	st.setHead('S')
 	st.sendMsg()
 
+	st.recvParameterDescription()
+	col := st.recvRowDescription()
+
 	st.recvMsg()
 	if st.T != '2' {
 		panic(errf("unknown response for bind: '%c'", st.T))
 	}
 
-	return &rows{Conn: st.Conn}, nil
+	return &rows{col: col, Conn: st.Conn}, nil
+}
+
+func (st *stmt) recvParameterDescription() {
+	// Assert then ignore this message for now
+	st.recvMsg()
+	if st.T != 't' {
+		panic(errf("expected parameter description, got: '%c'", st.T))
+	}
+	st.msg = newMsg()
+}
+
+func (st *stmt) recvRowDescription() []string {
+	st.recvMsg()
+	if st.T != 'T' {
+		panic(errf("expected row description, got: '%c'", st.T))
+	}
+
+	var n int16
+	st.read(&n)
+
+	col := make([]string, n)
+	for i := 0; i < len(col); i++ {
+		col[i] = st.readCString()
+		st.msg.b.Next(18) // Throw away unwanted (for now) fields.
+	}
+
+	return col
 }
 
 type rows struct {
 	*Conn
+	col []string
 }
 
 func (r *rows) Columns() []string {
-	return []string{""}
+	return r.col
 }
 
 func (r *rows) Close() error {
@@ -563,7 +599,7 @@ func (err *ServerError) Error() (s string) {
 func readError(cn *Conn) (err error) {
 	defer recoverErr(&err)
 
-	e := &ServerError{Fields:make(ErrorFields)}
+	e := &ServerError{Fields: make(ErrorFields)}
 	var t byte
 	for {
 		cn.read(&t)

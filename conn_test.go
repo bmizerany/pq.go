@@ -22,7 +22,7 @@ func (rwl *readWriteLogger) Read(p []byte) (int, error) {
 }
 
 func TestSimple(t *testing.T) {
-	db, err := sql.Open("postgres", "sslmode=require user=pqgotest password=foo")
+	db, err := sql.Open("postgres", "sslmode=disable user=pqgotest password=foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,13 +75,22 @@ func TestParams(t *testing.T) {
 		t.Fatalf("unable to open database connection: %v", err)
 	}
 
-	var n int
-	err = db.QueryRow("SELECT 1 WHERE true = $1", true).Scan(&n)
+	var a int
+	err = db.QueryRow("SELECT 1 WHERE true = $1", true).Scan(&a)
 	switch {
 	case err != nil:
-		t.Fatalf("%s: at %d", err, n)
-	case n != 1:
-		t.Fatalf("expected 1 at %d", n)
+		t.Fatalf("%s: at %d", err, a)
+	case a != 1:
+		t.Fatalf("expected 1 at %d", a)
+	}
+
+	var b, c int
+	err = db.QueryRow("SELECT 2, 3 WHERE true = $1", true).Scan(&b, &c)
+	switch {
+	case err != nil:
+		t.Fatalf("%s: at %d, %d", err, b, c)
+	case b != 2 || c != 3:
+		t.Fatalf("expected 2, 3 at %d, %d", b, c)
 	}
 }
 
