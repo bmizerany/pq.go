@@ -547,7 +547,31 @@ func encodeParam(param interface{}) (int32, []byte) {
 	return int32(len(s)), []byte(s)
 }
 
-func readError(cn *Conn) error {
-	// TODO: parse error correctly
-	return fmt.Errorf(cn.b.String())
+type ErrorFields map[byte]string
+
+type ServerError struct {
+	Fields ErrorFields
+}
+
+func (err *ServerError) Error() (s string) {
+	for k, v := range err.Fields {
+		s += fmt.Sprintf(` '%c':%s`, k, v)
+	}
+	return
+}
+
+func readError(cn *Conn) (err error) {
+	defer recoverErr(&err)
+
+	e := &ServerError{Fields:make(ErrorFields)}
+	var t byte
+	for {
+		cn.read(&t)
+		if t == 0 {
+			break
+		}
+		e.Fields[t] = cn.readCString()
+	}
+
+	return e
 }

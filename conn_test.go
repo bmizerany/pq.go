@@ -85,6 +85,22 @@ func TestParams(t *testing.T) {
 	}
 }
 
+func TestError(t *testing.T) {
+	db, err := sql.Open("postgres", "host=localhost user=pqgotest password=foo sslmode=disable")
+	if err != nil {
+		t.Fatalf("unable to open database connection: %v", err)
+	}
+
+	_, err = db.Query("SELECT holla!")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if _, ok := err.(*ServerError); !ok {
+		t.Fatal("expected *ServerError")
+	}
+}
+
 func TestSimpleParseURL(t *testing.T) {
 	expected := "host=hostname.remote"
 	str, err := ParseURL("postgres://hostname.remote")
