@@ -28,7 +28,7 @@ func TestSimple(t *testing.T) {
 	}
 	defer db.Close()
 
-	r, err := db.Query("SELECT 1")
+	r, err := db.Query("SELECT 1, 2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,14 +40,18 @@ func TestSimple(t *testing.T) {
 		t.Fatal("row expected")
 	}
 
-	var i int
-	err = r.Scan(&i)
+	var x, y int
+	err = r.Scan(&x, &y)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if i != 1 {
-		t.Fatal("expected i to be 1")
+	if x != 1 {
+		t.Fatal("expected x to be 1")
+	}
+
+	if y != 2 {
+		t.Fatal("expected y to be 2")
 	}
 }
 
@@ -66,31 +70,6 @@ func TestMultipleQueries(t *testing.T) {
 		case n != 1:
 			t.Fatalf("expected 1 at %d", n)
 		}
-	}
-}
-
-func TestParams(t *testing.T) {
-	db, err := sql.Open("postgres", "host=localhost user=pqgotest password=foo sslmode=disable")
-	if err != nil {
-		t.Fatalf("unable to open database connection: %v", err)
-	}
-
-	var a int
-	err = db.QueryRow("SELECT 1 WHERE true = $1", true).Scan(&a)
-	switch {
-	case err != nil:
-		t.Fatalf("%s: at %d", err, a)
-	case a != 1:
-		t.Fatalf("expected 1 at %d", a)
-	}
-
-	var b, c int
-	err = db.QueryRow("SELECT 2, 3 WHERE true = $1", true).Scan(&b, &c)
-	switch {
-	case err != nil:
-		t.Fatalf("%s: at %d, %d", err, b, c)
-	case b != 2 || c != 3:
-		t.Fatalf("expected 2, 3 at %d, %d", b, c)
 	}
 }
 
