@@ -12,6 +12,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"runtime"
 	"strings"
 )
 
@@ -484,12 +485,14 @@ func recoverErr(err *error) {
 		return
 	}
 
-	if e, ok := x.(error); ok {
-		*err = e
-		return
+	switch v := x.(type) {
+	case runtime.Error:
+		panic(x)
+	case error:
+		*err = v
+	default:
+		panic(x)
 	}
-
-	panic(x)
 }
 
 func dial(o Values) (net.Conn, error) {
