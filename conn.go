@@ -437,6 +437,8 @@ func (r *rows) Close() error {
 	}()
 
 	// TODO: Should I be doing this? Ask bradfitz.
+	//    NOTE: QueryRow doesn't work without this because it never reads until EOF
+	//    and so there is still a 'C' waiting in the pipe.
 	for {
 		err := r.Next(nil)
 		switch err {
