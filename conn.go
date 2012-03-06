@@ -424,6 +424,7 @@ func (st *stmt) recvRowDescription() []string {
 type rows struct {
 	*Conn
 	col []string
+	done bool
 }
 
 func (r *rows) Columns() []string {
@@ -435,11 +436,13 @@ func (r *rows) Close() error {
 		r.msg = newMsg()
 	}()
 
+	// TODO: Should I be doing this? Ask bradfitz.
 	for {
 		err := r.Next(nil)
 		switch err {
 		case nil:
-		case sql.ErrNoRows:
+		case io.EOF:
+			return nil
 		default:
 			return err
 		}
@@ -450,6 +453,10 @@ func (r *rows) Close() error {
 }
 
 func (r *rows) Next(dest []driver.Value) (err error) {
+	if r.done {
+		return io.EOF
+	}
+
 	defer recoverErr(&err)
 
 	r.recvMsg()
@@ -460,6 +467,7 @@ func (r *rows) Next(dest []driver.Value) (err error) {
 			return errf("expected 'Z' but got: '%c'", r.T)
 		}
 		r.read(&r.status)
+		r.done = true
 		return io.EOF
 	case r.T != 'D':
 		return errf("unknown response for execute: '%c'", r.T)
