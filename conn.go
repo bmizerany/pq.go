@@ -482,6 +482,7 @@ func (r *rows) Next(dest []driver.Value) (err error) {
 	for i := int16(0); i < n; i++ {
 		r.read(&l)
 		if l < 0 { // nil
+			dest[i] = nil
 			continue
 		}
 		b := make([]byte, l)
